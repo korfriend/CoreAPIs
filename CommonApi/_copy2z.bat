@@ -1,0 +1,33 @@
+copy ..\..\bin\X64_Release\vismtv_inbuilt_rwfiles.dll Z:\0_Users\Dojo\KAR\vismotive\release
+copy ..\..\bin\X64_Release\vismtv_inbuilt_tfmapgenerator.dll Z:\0_Users\Dojo\KAR\vismotive\release
+copy ..\..\bin\X64_Release\vismtv_inbuilt_ptypeprocessing.dll Z:\0_Users\Dojo\KAR\vismotive\release
+copy ..\..\bin\X64_Release\vismtv_inbuilt_vtypeprocessing.dll Z:\0_Users\Dojo\KAR\vismotive\release
+copy ..\..\bin\X64_Release\vismtv_inbuilt_renderercpu.dll Z:\0_Users\Dojo\KAR\vismotive\release
+copy ..\..\bin\X64_Release\vismtv_inbuilt_renderergpudx.dll Z:\0_Users\Dojo\KAR\vismotive\release
+copy ..\..\bin\X64_Release\vismtv_modeling_vera.dll Z:\0_Users\Dojo\KAR\vismotive\release
+copy ..\..\bin\X64_Release\vismtv_morphfilters.dll Z:\0_Users\Dojo\KAR\vismotive\release
+copy ..\..\bin\X64_Release\vismtv_meshextraction.dll Z:\0_Users\Dojo\KAR\vismotive\release
+copy ..\..\bin\X64_Release\vismtv_geometryanalyzer.dll Z:\0_Users\Dojo\KAR\vismotive\release
+copy ..\..\bin\X64_Release\FreeImage.dll Z:\0_Users\Dojo\KAR\vismotive\release
+copy ..\..\bin\X64_Release\CommonUnits.dll Z:\0_Users\Dojo\KAR\vismotive\release
+copy ..\..\bin\X64_Release\CommonApi.dll Z:\0_Users\Dojo\KAR\vismotive\release
+copy ..\..\bin\X64_Release\CommonApi.lib Z:\0_Users\Dojo\KAR\vismotive\release
+copy ..\..\bin\X64_Release\GpuManager.dll Z:\0_Users\Dojo\KAR\vismotive\release
+
+copy ..\..\bin\X64_Debug\vismtv_inbuilt_rwfiles.dll Z:\0_Users\Dojo\KAR\vismotive\debug
+copy ..\..\bin\X64_Debug\vismtv_inbuilt_tfmapgenerator.dll Z:\0_Users\Dojo\KAR\vismotive\debug
+copy ..\..\bin\X64_Debug\vismtv_inbuilt_ptypeprocessing.dll Z:\0_Users\Dojo\KAR\vismotive\debug
+copy ..\..\bin\X64_Debug\vismtv_inbuilt_vtypeprocessing.dll Z:\0_Users\Dojo\KAR\vismotive\debug
+copy ..\..\bin\X64_Debug\vismtv_inbuilt_renderercpu.dll Z:\0_Users\Dojo\KAR\vismotive\debug
+copy ..\..\bin\X64_Debug\vismtv_inbuilt_renderergpudx.dll Z:\0_Users\Dojo\KAR\vismotive\debug
+copy ..\..\bin\X64_Debug\vismtv_modeling_vera.dll Z:\0_Users\Dojo\KAR\vismotive\debug
+copy ..\..\bin\X64_Debug\vismtv_morphfilters.dll Z:\0_Users\Dojo\KAR\vismotive\debug
+copy ..\..\bin\X64_Debug\vismtv_meshextraction.dll Z:\0_Users\Dojo\KAR\vismotive\debug
+copy ..\..\bin\X64_Debug\vismtv_geometryanalyzer.dll Z:\0_Users\Dojo\KAR\vismotive\debug
+copy ..\..\bin\X64_Debug\FreeImage.dll Z:\0_Users\Dojo\KAR\vismotive\debug
+copy ..\..\bin\X64_Debug\CommonUnits.dll Z:\0_Users\Dojo\KAR\vismotive\debug
+copy ..\..\bin\X64_Debug\CommonApi.dll Z:\0_Users\Dojo\KAR\vismotive\debug
+copy ..\..\bin\X64_Debug\CommonApi.lib Z:\0_Users\Dojo\KAR\vismotive\debug
+copy ..\..\bin\X64_Debug\GpuManager.dll Z:\0_Users\Dojo\KAR\vismotive\debug
+
+copy ..\..\EngineCores\CommonApi\VisMtvApi.h Z:\0_Users\Dojo\KAR\vismotive

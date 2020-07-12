@@ -1,0 +1,167 @@
+==========> next release includes...
+
+* wildcard : UsePrevVersion / VzThickness (global & local) / InteractionDrivenTest_VrLightPos / TestConsoleOut
+
+
+*********** ver. 1.3.a <2019.07.xx>
+rendering engine uses recent direct3d runtime
+- feature level 12_1 (directx 11.3)
+
+fixing directx memory leakages
+add the following features.
+- screen-space ambient occlusion
+- advanced k-buffer algorithm
+- vzm::PickObject also provides hit position defined in the world space (if this information is not necessary, set null)
+- vzmproc::GenerateSamplePoints provides point cloud gathered around a given point (defined in the target model's object space)
+
+*********** ver. 1.2.d <2019.12.09>
+rendering engine has been enhanced
+- optimizing fragment race condition for transparency rendering (PAPER WORK)
+
+*********** ver. 1.2.c <2019.11.26>
+add the following features.
+- arc_ball helper supports panning operation : helpers::arcball::pan_move(...)
+- check invalid camera parameters in vzm::SetCameraParameters(...) and vzm::RenderScene(...)
+- All APIs except GetSceneObjectState() and GetCameraParameters() are supposed to print out error messages when they return false
+- vzm::GenerateLinesObject(...) and vzm::GenerateTrianglesObject(...) : color buffer's elements correspond to the vertex buffer's elements
+- surface rendering speed is dramatically enhanced
+bug fix
+- display direction problem of text obj made by vzm::GenerateTextObject(...)
+- vzm::PickObject(...) crashes when no vzm::ValidatePickTarget(...) is called
+- object which is not tris is set in vzm::ValidatePickTarget(...) (CAUTION : ONLY TRIS OBJ IS SUPPORTED IN THE VZM PICKING!)
+- CameraParameters::is_rgba_write is not applied to MPR 
+USAGE WARNING!!
+- when object_id is first used, the id must be set as zero (or previously allocated one)
+
+*********** ver. 1.2.b <2019.11.18>
+support direct volume rendering (DVR) and mulpi-planar rendering (MPR)
+- vzm::ObjStates::associated_obj_ids
+- vzm::LoadModelFile(...) : (only support den file... filename must include the volume information)
+- vzm::GenerateMappingTable(...) : use this for OTF map generation and update
+- vzm::CameraParameters::projection_mode : '4' is added for MPR mode (in the future, the parameter type will be changed to enum.)
+
+*********** ver. 1.2.a <2019.11.14>
+rendering engine has been enhanced
+- OIT performance has been enhanced in terms of accuracy, quality and speed
+---- the detailed techniques used in this version will be introduced in the paper (PAPER WORK)
+- automatically make the normal vector of faces to be consistent in rendering time
+add the following features.
+- vzm::LoadModelFile(..., const bool unify_redundancy)
+
+*********** ver. 1.1.f <2019.11.04>
+add near/far plane setting for each camera
+- vzm::CameraParameters::np, fp (float type)
+change parameter name
+- vzm::ObjStates::ignore_vertex_color ==> use_vertex_color (the usage is changed as false/true)
+- vzm::ObjStates::ignore_vertex_color ==> use_vertex_color (the usage is changed as false/true)
+
+*********** ver. 1.1.e <2019.11.01>
+bug fix
+- display direction problem of text obj made by vzm::GenerateTextObject(...)
+
+*********** ver. 1.1.d <2019.10.28>
+add the following features.
+- vzm::ObjStates::show_outline : shows a cartoon-style outline (opaque black)
+
+*********** ver. 1.1.c <2019.10.25>
+bug fix
+- shading factors were not applied. (ObjStates::emission, diffusion, specular, sp_pow)
+- vzm::GenerateCylindersObject was broken when rgb_list is NULL (rgb_list can be optionally set)
+consistent normal computation
+- obj file (wo/ normal) loader computed the normal w.r.t. CW face direction
+- in general, face direction is defeind as CCW. (now CCW has been applied)
+
+*********** ver. 1.1.b <2019.10.18>
+support multiple cameras in a single scene (adding "const int cam_id")
+- vzm::SetCameraParameters(...)
+- vzm::GetCameraParameters(...)
+- vzm::RenderScene(...)
+- vzm::GetRenderBufferPtrs(...)
+automatically compute normals of points when there is no normal in triangle polygons (nrl_list == NULL && stride_prim_idx == 3)
+- vzm::GeneratePrimitiveObject(...)
+add the following features.
+- vzm::ValidatePickTarget(...)
+- vzm::PickObject(...)
+- add bool ignore_vertex_color, ignore_vertex_wirecolor in vzm::ObjStates
+fix a bug related with the wireframe option
+
+*********** ver. 1.1.a <2019.10.03>
+bug fix
+- vzm::GetPModelData(...)
+add the following features.
+- vzm::GeneratePrimitiveObject(...)
+deprecate some parameters; is_ccw at vzm::GenerateTrianglesObject(...)
+
+*********** ver. 1.0.g <2019.09.18>
+resolve AR calibration issue
+- helpers::ComputeCameraRendererParameters(...)
+- helpers::ComputeArCameraCalibrateInfo(...)
+package issue
+- fix QT dependency problem.
+
+*********** ver. 1.0.f <2019.09.10>
+add the following features.
+- vzm::CameraParameters::is_rgba_write
+- vzm::ObjStates::line_thickness
+- vzm::ObjStates::is_wireframe
+- vzm::ObjStates::wire_color
+- vzm::GenerateCylindersObject(...)
+- vzm::GenerateTrianglesObject(...)
+- vzm::GenerateLinesObject(...)
+- vzm::GetCameraParameters(...)
+- vzm::GenerateTextObject(...)
+- helpers::ComputeArCameraCalibrateInfo(...)
+- helpers::arcball...
+
+*********** ver. 1.0.e <2019.09.06>
+add the following features.
+- vzm::GetSceneObjectState(...)
+- add float fx, fy, sc, cx, cy in vzm::CameraParameters
+- change vzm::CameraParameters::mode_plane_size ==> projection_mode
+- helpers::ComputeCameraRendererMatrice(...)
+- helpers::ComputeCameraRendererParameters(...)
+deprecate the following features.
+- vzm::GetSceneObjectState(...)
+- helpers::ComputeCameraProjMatrix(...)
+move namespace functions
+
+*********** ver. 1.0.d <2019.08.29>
+fix redundant dll import of vzmproc::ComputeRigidTransform(...)
+add the following features.
+- vzm::ObjStates::point_thickness
+- vzm::GetPModelData(...)
+- vzm::GeneratePointCloudObject(...)
+- vzmproc::ComputeCameraProjMatrix(...)
+- vzmproc::SimplifyPModelByUGrid(...)
+- vzmproc::ComputePCA(...)
+- vzmproc::ComputePCAc(...)
+
+*********** [package] <2019.08.14>
+add some of redist (release) runtime dll files.
+- tbb.dll
+- tbbmalloc.dll
+
+*********** ver. 1.0.c <2019.08.14>
+naming change : vzm::ReplaceOrAddSceneObject's' ==> ReplaceOrAddSceneObject
+apply [in/out] obj_id concept to model generator and loader
+add the object generation separately
+- vzm::GenerateArrowObject(...)
+- vzm::GenerateSpheresObject(...)
+add the following features.
+- vzm::RemoveScene(...)
+
+*********** ver. 1.0.b <2019.08.02>
+add the following features.
+- vzmproc::ComputeRigidTransform(...)
+
+*********** [package] <2019.07.31>
+add developer runtime dependency dll files.
+
+*********** ver. 1.0.a <2019.07.30>
+add the following features.
+- vzm::ObjStates::color[4]
+- helpers::ReplaceOrAddArrowObject(...)
+- helpers::ReplaceOrAddSpheresObject(...)
+
+*********** ver. 1.0. <2019.07.30>
+first version release!
