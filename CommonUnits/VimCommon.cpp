@@ -63,6 +63,8 @@ namespace vmobjects {
 	string dtype_uint_name = typeid(uint).name();
 	string dtype_float_name = typeid(float).name();
 	string dtype_double_name = typeid(double).name();
+	string dtype_int64_name = typeid(__int64).name();
+	string dtype_uint64_name = typeid(unsigned __int64).name();
 	string dtype_string_name = typeid(string).name();
 	string dtype_vector_byte_name = typeid(vector<byte>).name();
 	string dtype_vector_int_name = typeid(vector<int>).name();
@@ -361,11 +363,14 @@ namespace vmobjects {
 		int ref_object_id;
 
 		VmLObject* local_lobj = NULL;
+
+		unsigned long long contents_update_time = 0;
 	
 		// VmObject 에 등록되는 customized information을 저장된 map container
 		map<string, string> mapStringParameter;
 		map<string, bool> mapBoolParameter;
-		map<string, int> mapIntParameter;  
+		map<string, int> mapIntParameter;
+		map<string, __int64> mapInt64Parameter;
 		map<string, vmint2> mapInt2Parameter;  // for legacy
 		map<string, vmint3> mapInt3Parameter;  // for legacy
 		map<string, vmint4> mapInt4Parameter;  // for legacy
@@ -429,6 +434,11 @@ namespace vmobjects {
 		return (EvmObjectType)((oa_res->object_id >> 24) & 0xFF);
 	}
 
+	unsigned long long VmObject::GetContentsUpdateTime()
+	{
+		return oa_res->contents_update_time;
+	}
+
 	EvmObjectType VmObject::GetObjectTypeFromID(const int object_id)
 	{
 		return (EvmObjectType)((object_id >> 24) & 0xFF);
@@ -463,6 +473,12 @@ namespace vmobjects {
 	bool VmObject::RegisterCustomParameter(const std::string& _key, const int _data)
 	{
 		oa_res->mapIntParameter[_key] = _data;
+		return true;
+	}
+
+	bool VmObject::RegisterCustomParameter(const std::string& _key, const __int64 _data)
+	{
+		oa_res->mapInt64Parameter[_key] = _data;
 		return true;
 	}
 
@@ -519,6 +535,8 @@ namespace vmobjects {
 			GET_VALUE(bool, oa_res->mapBoolParameter)
 		else if (dtype.type_name == dtype_int_name)
 			GET_VALUE(int, oa_res->mapIntParameter)
+		else if (dtype.type_name == dtype_int64_name)
+			GET_VALUE(__int64, oa_res->mapInt64Parameter)
 		else if (dtype.type_name == dtype_double_name)
 			GET_VALUE(double, oa_res->mapDoubleParameter)
 		else if (dtype.type_name == dtype_string_name)
@@ -2387,6 +2405,40 @@ ERROR_UpdateTagBlocks:
 				}
 			}
 		}
+
+		// check reusability of memory
+		if (voaprim_res->prim_data.num_prims == prim_data.num_prims
+			&& voaprim_res->prim_data.num_vtx == prim_data.num_vtx
+			&& voaprim_res->prim_data.num_vidx == prim_data.num_vidx
+			&& voaprim_res->prim_data.GetNumVertexDefinitions() == prim_data.GetNumVertexDefinitions()
+			&& voaprim_res->prim_data.texture_res_info.size() == prim_data.texture_res_info.size())
+		{
+			// texture check
+			bool is_same_tx_vessel = true;
+			for (auto it = prim_data.texture_res_info.begin(); it != prim_data.texture_res_info.end(); it++)
+			{
+				auto it_prev = voaprim_res->prim_data.texture_res_info.find(it->first);
+				if (it_prev == voaprim_res->prim_data.texture_res_info.end())
+				{
+					is_same_tx_vessel = false;
+					break;
+				}
+				int new_w = std::get<0>(it->second);
+				int new_h = std::get<1>(it->second);
+				int new_bytes_stride = std::get<2>(it->second);
+
+				int prev_w = std::get<0>(it_prev->second);
+				int prev_h = std::get<1>(it_prev->second);
+				int prev_bytes_stride = std::get<2>(it_prev->second);
+				if (prev_w != new_w || prev_h != new_h || prev_bytes_stride != new_bytes_stride)
+				{
+					is_same_tx_vessel = false;
+					break;
+				}
+			}
+			this->RegisterCustomParameter("_bool_ReuseGpuMemory", is_same_tx_vessel);
+		}
+
 		voaprim_res->prim_data.Delete();
 		VMSAFE_DELETE(voaprim_res->kdt);
 		VMSAFE_DELETE(voaprim_res->pc);
@@ -2403,6 +2455,8 @@ ERROR_UpdateTagBlocks:
 		voa_res->fmat_ws2os = voa_res->mat_ws2os;
 	
 		voa_res->aabbMm = prim_data.aabb_os;
+
+		this->oa_res->contents_update_time = vmhelpers::GetCurrentTimePack();
 		return true;
 	}
 

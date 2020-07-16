@@ -498,11 +498,11 @@ bool vzm::LoadModelFile(const std::string& filename, int& obj_id, const bool uni
 		obj->RegisterCustomParameter("_matrix_originalOS2WS", obj->GetMatrixOS2WS());
 	}
 
-	if (!is_new)
-	{
-		for (auto itg = gpu_manager.begin(); itg != gpu_manager.end(); itg++)
-			itg->second->ReleaseGpuResourcesBySrcID(obj_id);
-	}
+	//if (!is_new)
+	//{
+	//	for (auto itg = gpu_manager.begin(); itg != gpu_manager.end(); itg++)
+	//		itg->second->ReleaseGpuResourcesBySrcID(obj_id);
+	//}
 
 	return true;
 }
@@ -522,7 +522,8 @@ auto __update_picking_state = [](VmVObjectPrimitive* prim_obj, bool force_to_upd
 	return lpdll_function(prim_obj);
 };
 
-bool vzm::GenerateArrowObject(const float* pos_s, const float* pos_e, const float radius, int& obj_id)
+
+auto __GetPObject = [](int& obj_id) -> VmVObjectPrimitive*
 {
 	VmVObjectPrimitive* prim_obj = (VmVObjectPrimitive*)res_manager->GetVObject(obj_id);
 	if (prim_obj == NULL)
@@ -530,11 +531,17 @@ bool vzm::GenerateArrowObject(const float* pos_s, const float* pos_e, const floa
 		prim_obj = new VmVObjectPrimitive();
 		obj_id = res_manager->RegisterVObject(prim_obj, ObjectTypePRIMITIVE);
 	}
-	else
-	{
-		for (auto itg = gpu_manager.begin(); itg != gpu_manager.end(); itg++)
-			itg->second->ReleaseGpuResourcesBySrcID(obj_id);
-	}
+	//else
+	//{
+	//	for (auto itg = gpu_manager.begin(); itg != gpu_manager.end(); itg++)
+	//		itg->second->ReleaseGpuResourcesBySrcID(obj_id);
+	//}
+	return prim_obj;
+};
+
+bool vzm::GenerateArrowObject(const float* pos_s, const float* pos_e, const float radius, int& obj_id)
+{
+	VmVObjectPrimitive* prim_obj = __GetPObject(obj_id);
 
 	PrimitiveData prim_data;
 	vmdouble3 _pos_s = __cv3__ pos_s;
@@ -548,22 +555,6 @@ bool vzm::GenerateArrowObject(const float* pos_s, const float* pos_e, const floa
 	__update_picking_state(prim_obj, false);
 	return true;
 }
-
-auto __GetPObject = [](int& obj_id) -> VmVObjectPrimitive*
-{
-	VmVObjectPrimitive* prim_obj = (VmVObjectPrimitive*)res_manager->GetVObject(obj_id);
-	if (prim_obj == NULL)
-	{
-		prim_obj = new VmVObjectPrimitive();
-		obj_id = res_manager->RegisterVObject(prim_obj, ObjectTypePRIMITIVE);
-	}
-	else
-	{
-		for (auto itg = gpu_manager.begin(); itg != gpu_manager.end(); itg++)
-			itg->second->ReleaseGpuResourcesBySrcID(obj_id);
-	}
-	return prim_obj;
-};
 
 bool vzm::GenerateSpheresObject(const float* xyzr_list, const float* rgb_list, const int num_spheres, int& obj_id)
 {
@@ -1004,9 +995,6 @@ bool vzm::GenerateTextObject(const float* xyz_LT_view_up, const std::string& tex
 		return fail_ret("INVALID DATA IN GenerateTextObject!");
 	}
 	__update_picking_state(prim_obj, false);
-
-	for (auto itg = gpu_manager.begin(); itg != gpu_manager.end(); itg++)
-		itg->second->ReleaseGpuResourcesBySrcID(obj_id);
 
 	return true;
 }
@@ -1847,7 +1835,7 @@ bool ReplaceOrAddSpheresObject(const int scene_id, int& obj_id, const vzm::ObjSt
 	return vzm::ReplaceOrAddSceneObject(scene_id, obj_id, obj_states);
 }
 
-#include "../../VisNativeModules/vismtv_modeling_vera/InteropHeader.h"
+#include "../../VmNativeModules/vismtv_modeling_vera/InteropHeader.h"
 
 #define __cv3__ *(glm::fvec3*)
 #define __cv4__ *(glm::fvec4*)
@@ -1950,11 +1938,11 @@ bool vzmproc::SimplifyPModelByUGrid(const int obj_src_id, const float cell_width
 	PrimitiveData* prim_dst_data = prim_dst_obj->GetPrimitiveData();
 	cout << "vertex number : " << prim_src_data->num_vtx << " to " << prim_dst_data->num_vtx << endl;
 
-	if (!is_new)
-	{
-		for (auto itg = gpu_manager.begin(); itg != gpu_manager.end(); itg++)
-			itg->second->ReleaseGpuResourcesBySrcID(obj_dst_id);
-	}
+	//if (!is_new)
+	//{
+	//	for (auto itg = gpu_manager.begin(); itg != gpu_manager.end(); itg++)
+	//		itg->second->ReleaseGpuResourcesBySrcID(obj_dst_id);
+	//}
 
 	return true;
 }
@@ -1984,8 +1972,8 @@ bool vzmproc::GenerateSamplePoints(const int obj_src_id, const float* pos_src, c
 	{
 		cout << "# of sample points : " << prim_dst_obj->GetPrimitiveData()->num_vtx << endl;
 
-		for (auto itg = gpu_manager.begin(); itg != gpu_manager.end(); itg++)
-			itg->second->ReleaseGpuResourcesBySrcID(obj_dst_id);
+		//for (auto itg = gpu_manager.begin(); itg != gpu_manager.end(); itg++)
+		//	itg->second->ReleaseGpuResourcesBySrcID(obj_dst_id);
 
 		return true;
 	}

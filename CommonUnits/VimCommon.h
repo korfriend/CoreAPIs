@@ -1055,6 +1055,8 @@ namespace vmobjects
 		 * @remarks VmObject가 정의되어 있는 상태면 이것에 따라 VmObject의 instance를 생성함
 		 */
 		EvmObjectType GetObjectType();
+
+		unsigned long long GetContentsUpdateTime();
 		
 		// Custom Parameter
 		/*!
@@ -1069,6 +1071,7 @@ namespace vmobjects
 		bool RegisterCustomParameter(const std::string& _key, const bool _data);
 		bool RegisterCustomParameter(const std::string& _key, const int _data);
 		bool RegisterCustomParameter(const std::string& _key, const double _data);
+		bool RegisterCustomParameter(const std::string& _key, const __int64 _data);
 
 		// will be deprecated
 		bool RegisterCustomParameter(const std::string& _key, const vmint2 _data);
