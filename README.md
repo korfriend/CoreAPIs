@@ -8,7 +8,7 @@
 [li]: https://opensource.org/licenses/MIT
 
 <br/>
-VisMotive framework is designed for open-source scientific processing tools based on point clouds, polygonal models, and volumetric models. Our goad is to provide simple and easy APIs for front-end developers while allowing back-end developers (who develope and research specific tasks as separate modules) to connect their modules to front-end easily.
+VisMotive framework is designed for open-source scientific processing tools based on point clouds, polygonal models, and volumetric models. We provide scientific visualation tools (back- and front- end) written in C++. It is simple and easy to use. Our goal is to provide simple APIs for front-end developers while allowing back-end developers (who develope and research specific tasks as separate modules) to connect their modules to front-end easily. This project is hosted on <a href="https://github.com/korfriend/">GitHub</a>.
 
 ### Requirements:
 - Windows 10
@@ -46,4 +46,5 @@ Only GL math is used, which is included in CommonUnits folder. If you want to us
     - DLL files : "CommonApi.dll", "CommonUnits.dll", "GpuManager.dll", and specific module dlls
 
 ### What Nex?!
-Some comments for explaning source codes are written in Korean. I will replace the language to English as default language. Examples and sample codes will be available as individual projects.
+- Some comments for explaning source codes are written in Korean. I will replace the language to English as default language. 
+- Examples and sample codes will be available as individual projects.
