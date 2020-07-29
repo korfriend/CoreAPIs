@@ -1,8 +1,11 @@
 # CoreAPIs for VisMotive framework
-[![Build status][s1]][av]
+[![Build status][s1]][av][![License: MIT][s3]][li]
 
 [s1]: https://ci.appveyor.com/api/projects/status/3dbcee5gd6i7qh7v?svg=true
+[s3]: https://img.shields.io/badge/License-MIT-orange.svg
+
 [av]: https://ci.appveyor.com/project/korfriend/vismotive-coreapis
+[li]: https://opensource.org/licenses/MIT
 
 <br/>
 VisMotive framework is designed for open-source scientific processing tools based on point clouds, polygonal models, and volumetric models. Our goad is to provide simple and easy APIs for front-end developers while allowing back-end developers (who develope and research specific tasks as separate modules) to connect their operations to front-end easily.
