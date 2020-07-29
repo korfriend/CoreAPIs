@@ -1,6 +1,10 @@
 # CoreAPIs for VisMotive framework
 <br/>
-Currently, only "static" build environments based on  visual studio (2017) are supported. ...
+VisMotive framework is designed for open-source scientific processing tools based on point clouds, polygonal models, and volumetric models. Our goad is to provide simple and easy APIs for front-end developers while allowing back-end developers (who develope and research specific tasks as separate modules) to connect their operations to front-end easily.
+
+### Requirements:
+- Windows 10
+- Visual Studio 2017 or higher
 
 ### Build environment
 Current build environment assumes the following structure of the developement folders. As external dependencies, our VisMotive-based projects use this core APIs and libraries for most of the volumetric and polygonal processing tasks. To be clear your folder structure should be something quite similar to:
