@@ -14,7 +14,7 @@ VisMotive framework is designed for open-source scientific processing tools base
 - Windows 10
 - Visual Studio 2017 or higher
 
-### Build environment
+### Build Environments
 Current build environment assumes the following structure of the developement folders. As external dependencies, our VisMotive-based projects use this core APIs and libraries for most of the volumetric and polygonal processing tasks. To be clear your folder structure should be something quite similar to:
 
     yourdevfolder/
@@ -36,14 +36,14 @@ Current build environment assumes the following structure of the developement fo
 
 ### Dependencies
 Only GL math is used, which is included in CommonUnits folder. If you want to use this CoreAPIs library as binary libs, then import the following files
-- Scenario 1 for developing VisMotive-based modules 
+- Scenario 1 (back-end developers) for developing VisMotive-based modules 
     - Header files : "helpers.h" and "VimCommon.h" 
     - Libraty files : "CommonUnits.lib" and "GpuManager.lib (optional for GPU rendering engine developer)"
     - DLL files : "CommonUnits.dll" and "GpuManager.dll (optional for GPU rendering engine developer)"
-- Scenario 2 for developing application that uses VisMotive-based modules and libraries 
+- Scenario 2 (front-end developers) for developing applicatiosn that uses VisMotive-based modules and libraries 
     - Header file : "VisMtvApi.h" 
     - Libraty file : "CommonApi.lib"
     - DLL files : "CommonApi.dll", "CommonUnits.dll", "GpuManager.dll", and specific module dlls
 
-### Next plan
+### What Nex?!
 Some comments for explaning source codes are written in Korean. I will replace the language to English as default language. Examples and sample codes will be available as individual projects.
