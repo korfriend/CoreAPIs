@@ -1835,7 +1835,18 @@ bool ReplaceOrAddSpheresObject(const int scene_id, int& obj_id, const vzm::ObjSt
 	return vzm::ReplaceOrAddSceneObject(scene_id, obj_id, obj_states);
 }
 
-#include "../../VmNativeModules/vismtv_modeling_vera/InteropHeader.h"
+//#include "../../VmNativeModules/vismtv_modeling_vera/InteropHeader.h"
+typedef struct __float3__
+{
+	float x, y, z;
+	__float3__() { x = y = z = 0; };
+	__float3__(float _x, float _y, float _z) { x = _x; y = _y; z = _z; };
+	__float3__(int _color) {
+		x = (float)((_color >> 16) & 0xFF) / 255.f;
+		y = (float)((_color >> 8) & 0xFF) / 255.f;
+		z = (float)((_color >> 0) & 0xFF) / 255.f;
+	};
+}  __float3;
 
 #define __cv3__ *(glm::fvec3*)
 #define __cv4__ *(glm::fvec4*)

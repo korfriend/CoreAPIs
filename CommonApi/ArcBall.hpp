@@ -165,7 +165,7 @@ public:
 		m_v3VecView = arcballCamState.v3VecView;
 
 		glm::dvec3 v3VecCam2Center = m_d3PosArcballCenter - m_d3PosCamera;
-		m_dActivatedRadius = std::min(m_dRadius, (double)glm::length(v3VecCam2Center) * 0.8);
+		m_dActivatedRadius = min(m_dRadius, (double)glm::length(v3VecCam2Center) * 0.8);
 
 		if (arcballCamState.bIsPerspective)
 		{
@@ -250,7 +250,7 @@ public:
 		else
 		{
 			//dAngleDeg = Vector3D.AngleBetween(v3VecCenter3SurfStart, v3VecCenter3SurfEnd);
-			dAngle = std::acos(std::max(std::min(glm::dot(v3VecCenter3SurfStart, v3VecCenter3SurfEnd), 1.0), -1.0)); // 0 to PI
+			dAngle = acos(max(min(glm::dot(v3VecCenter3SurfStart, v3VecCenter3SurfEnd), 1.0), -1.0)); // 0 to PI
 		}
 		if (dAngle == 0) return 0;
 
