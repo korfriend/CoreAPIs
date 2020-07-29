@@ -8,7 +8,7 @@
 [li]: https://opensource.org/licenses/MIT
 
 <br/>
-VisMotive framework is designed for open-source scientific processing tools based on point clouds, polygonal models, and volumetric models. Our goad is to provide simple and easy APIs for front-end developers while allowing back-end developers (who develope and research specific tasks as separate modules) to connect their operations to front-end easily.
+VisMotive framework is designed for open-source scientific processing tools based on point clouds, polygonal models, and volumetric models. Our goad is to provide simple and easy APIs for front-end developers while allowing back-end developers (who develope and research specific tasks as separate modules) to connect their modules to front-end easily.
 
 ### Requirements:
 - Windows 10
