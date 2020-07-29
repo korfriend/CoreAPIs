@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../CommonUnits/VimCommon.h"
+#include "VimCommon.h"
 
 using namespace std;
 using namespace vmobjects;

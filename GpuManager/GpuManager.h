@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../CommonUnits/VimCommon.h"
+#include "VimCommon.h"
 
 //#include <unordered_map>
 /**

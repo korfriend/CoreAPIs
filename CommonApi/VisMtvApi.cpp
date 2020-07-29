@@ -1,5 +1,5 @@
 #include "VisMtvApi.h"
-#include "../CommonUnits/VimCommon.h"
+#include "VimCommon.h"
 #include "../GpuManager/GpuManager.h"
 #include "ModuleArbiter.h"
 #include "ResourceManager.h"
