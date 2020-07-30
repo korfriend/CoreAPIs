@@ -27,7 +27,7 @@ Current build environment assumes the following structure of the developement fo
      │   ├──X64_Debug
      │   └──X64_Release
      └──External Projects (based on our VisMotive data structures and libraries) 
-         ├──project1
+         ├──project1 (e.g., https://github.com/korfriend/LocalIsosurfaceModeler)
          ├──project2
          ├──project3
          ├──...
