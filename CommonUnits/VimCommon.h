@@ -33,7 +33,7 @@
 #include <algorithm>
 #include <typeinfo>
 
-#include "helpers.h"
+#include "VimHelpers.h"
 
 #define __WINDOWS
 #define __FILEMAP

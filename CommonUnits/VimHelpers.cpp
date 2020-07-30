@@ -1,4 +1,4 @@
-#include "helpers.h"
+#include "VimHelpers.h"
 
 //#include <string>
 #include <math.h>

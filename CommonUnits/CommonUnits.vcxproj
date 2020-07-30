@@ -19,11 +19,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Helpers.cpp" />
+    <ClCompile Include="VimHelpers.cpp" />
     <ClCompile Include="VimCommon.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="helpers.h" />
+    <ClInclude Include="VimHelpers.h" />
     <ClInclude Include="nanoflann.hpp" />
     <ClInclude Include="VimCommon.h" />
   </ItemGroup>
