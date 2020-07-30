@@ -19,15 +19,15 @@ Current build environment assumes the following structure of the developement fo
 
     yourdevfolder/
      |
-     ├──CoreAPIs (https://github.com/korfriend/VisMotive-CoreAPIs/)
+     ├──CoreAPIs (https://github.com/korfriend/VisMotive-CoreAPIs)
      │   ├──CommonApi
      │   ├──CommonUnits (including GL math folder)
      │   └──GpuManager
-     ├──bin (our projects use these debug/release folders as external libs folders)
+     ├──bin (built files are available in https://github.com/korfriend/VisMotive-BuiltBinary)
      │   ├──X64_Debug
      │   └──X64_Release
      └──External Projects (based on our VisMotive data structures and libraries) 
-         ├──project1
+         ├──project1 (e.g., https://github.com/korfriend/LocalIsosurfaceModeler)
          ├──project2
          ├──project3
          ├──...
