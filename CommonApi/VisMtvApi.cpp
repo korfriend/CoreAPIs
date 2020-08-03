@@ -3,7 +3,7 @@
 #include "../GpuManager/GpuManager.h"
 #include "ModuleArbiter.h"
 #include "ResourceManager.h"
-#include "LicenseTimer.hpp"
+
 #include <iostream>
 
 #pragma warning (disable:4756)
@@ -19,7 +19,6 @@ using namespace vmgpuinterface;
 VmModuleArbiter* module_arbitor = NULL;
 VmResourceManager* res_manager = NULL;
 VmLObject* global_buf_obj = NULL;
-Timer _timer = Timer();
 
 #define __cv3__ *(glm::fvec3*)
 #define __cv4__ *(glm::fvec4*)
@@ -122,20 +121,6 @@ bool vzm::InitEngineLib()
 	// register in-bulit modules //
 	if (module_arbitor || res_manager || gpu_manager.size() != 0 || is_initialized_engine)
 		return fail_ret("ERROR - ALREADY INITIALIZED!!");
-
-	static bool _licence_check = false;
-	static int _time_interval = 60000 * 30; // 30 min
-	_timer.setInterval([&]() {
-		int keys = Check_USB_Key();
-		//cout << "Key Check : " << keys << endl;
-		if (keys == 0)
-		{
-			//::MessageBoxA(NULL, "License Issue Occurred! Contact : korfriend@gmail.com", NULL, S_OK);
-			cout << "***** License Issue Occurred! Contact : korfriend@gmail.com" << keys << endl;
-			DeinitEngineLib(); 
-			::MessageBoxA(NULL, "License Issue Occurred! Contact : korfriend@gmail.com", NULL, S_OK);
-		}
-	}, _time_interval);
 
 	std::cout << "\nDongjoon's VisMotive Framework "<< VERSION << "\n" << std::endl;
 
@@ -243,8 +228,6 @@ bool vzm::DeinitEngineLib()
 
 	std::cout << "Render (successfully) calls : " << renderer_excutable_count << std::endl;
 	std::cout << "Bye Bye~ ^^" << std::endl;
-
-	_timer.stop();
 
 	return true;
 }

@@ -100,7 +100,7 @@ struct VmModule{
  * @class VmModuleArbiter
  * @brief module 등록, 관리를 위한 class
  */
-class VmModuleArbiter
+__vmstaticclass VmModuleArbiter
 {
 private:
 protected:

@@ -8,7 +8,7 @@ using namespace vmobjects;
  * @class VmResourceManager
  * @brief Framework 에서 VmObject 단위로 resource를 관리하는 class
  */
-class VmResourceManager
+__vmstaticclass VmResourceManager
 {
 private:
 protected:
