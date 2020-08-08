@@ -8,7 +8,9 @@
 
 #pragma warning (disable:4756)
 
-#define TESTOUT(NAME, P) {cout << NAME << P.x << ", " << P.y << ", " << P.z << endl;}
+bool g_is_display = true;
+
+#define TESTOUT(NAME, P) {if(g_is_display){cout << NAME << P.x << ", " << P.y << ", " << P.z << endl;}}
 
 using namespace vzm;
 using namespace std;
@@ -70,7 +72,8 @@ struct SceneInfo
 
 auto fail_ret = [](const string& err_str)
 {
-	cout << err_str << endl;
+	if(g_is_display)
+		cout << err_str << endl;
 	return false;
 };
 
@@ -94,13 +97,14 @@ T LoadDLL(string dll_name, string function_name)
 		hMouleLib = it->second;
 	if (hMouleLib == NULL)
 	{
-		cout << "DLL import ERROR : " << dll_name << endl;
+		if(g_is_display)
+			cout << "DLL import ERROR : " << dll_name << endl;
 		return NULL;
 	}
 
 	T lpdll_function = NULL;
 	lpdll_function = (T)VMGETPROCADDRESS(hMouleLib, function_name.c_str());
-	if (lpdll_function == NULL)
+	if (lpdll_function == NULL && g_is_display)
 		cout << "FUNC import ERROR : " << function_name << endl;
 	return lpdll_function;
 }
@@ -243,6 +247,11 @@ void vzm::DebugTestSet(const std::string& _script, const void* _pvalue, const si
 	container2[_script] = std::tuple<size_t, byte*>(size_bytes, pv);
 }
 
+void vzm::DisplayConsoleMessages(const bool is_display)
+{
+	g_is_display = is_display;
+}
+
 #define SET_FUNC(vfn, OT, is_in, obj) vfn.vmobjs.insert(pair<VmObjKey, vector<VmObject*>>(VmObjKey(OT, is_in), vector<VmObject*>(1, obj)))
 
 auto splitpath = [](const std::string& str, const std::set<char>& delimiters) -> std::vector<std::string>
@@ -293,7 +302,8 @@ bool vzm::LoadModelFile(const std::string& filename, int& obj_id, const bool uni
 			usage = "IMPORTVOLUME_X3D";
 		else
 		{
-			std::cout << "Invalid Format! (Not Yet Supported.. of " << file_ext << ")" << std::endl;
+			if(g_is_display)
+				std::cout << "Invalid Format! (Not Yet Supported.. of " << file_ext << ")" << std::endl;
 			return fail_ret("LoadModelFile FAILURE!");
 		}
 	}
@@ -454,7 +464,8 @@ bool vzm::LoadModelFile(const std::string& filename, int& obj_id, const bool uni
 	{
 		global_buf_obj->ClearAllBuffers();
 		global_buf_obj->ClearAllDstObjValues();
-		std::cout << "Failed to load the file in the file load module" << std::endl;
+		if(g_is_display)
+			std::cout << "Failed to load the file in the file load module" << std::endl;
 		if (is_new) res_manager->EraseVObject(tmp_obj_id);
 		return fail_ret("Failed to load the file in the file load module!");
 	}
@@ -465,18 +476,24 @@ bool vzm::LoadModelFile(const std::string& filename, int& obj_id, const bool uni
 	if (is_prim)
 	{
 		PrimitiveData* prim_data = ((VmVObjectPrimitive*)obj)->GetPrimitiveData();
-		std::cout << "Success to load " << filename << std::endl;
-		std::cout << "==> min/max pos of the object are (" <<
-			prim_data->aabb_os.pos_min.x << ", " << prim_data->aabb_os.pos_min.y << ", " << prim_data->aabb_os.pos_min.z << ") / (" <<
-			prim_data->aabb_os.pos_max.x << ", " << prim_data->aabb_os.pos_max.y << ", " << prim_data->aabb_os.pos_max.z << ")" << std::endl;
+		if (g_is_display)
+		{
+			std::cout << "Success to load " << filename << std::endl;
+			std::cout << "==> min/max pos of the object are (" <<
+				prim_data->aabb_os.pos_min.x << ", " << prim_data->aabb_os.pos_min.y << ", " << prim_data->aabb_os.pos_min.z << ") / (" <<
+				prim_data->aabb_os.pos_max.x << ", " << prim_data->aabb_os.pos_max.y << ", " << prim_data->aabb_os.pos_max.z << ")" << std::endl;
+		}
 	}
 	else
 	{
 		VolumeData* vol_data = ((VmVObjectVolume*)obj)->GetVolumeData();
-		std::cout << "Success to load " << filename << std::endl;
-		std::cout << "==> volume size / pitch (" <<
-			vol_data->vol_size.x << ", " << vol_data->vol_size.y << ", " << vol_data->vol_size.z << ") / (" <<
-			vol_data->vox_pitch.x << ", " << vol_data->vox_pitch.y << ", " << vol_data->vox_pitch.z << ")" << std::endl;
+		if (g_is_display)
+		{
+			std::cout << "Success to load " << filename << std::endl;
+			std::cout << "==> volume size / pitch (" <<
+				vol_data->vol_size.x << ", " << vol_data->vol_size.y << ", " << vol_data->vol_size.z << ") / (" <<
+				vol_data->vox_pitch.x << ", " << vol_data->vox_pitch.y << ", " << vol_data->vox_pitch.z << ")" << std::endl;
+		}
 
 		obj->RegisterCustomParameter("_matrix_originalOS2WS", obj->GetMatrixOS2WS());
 	}
@@ -974,7 +991,8 @@ bool vzm::GenerateTextObject(const float* xyz_LT_view_up, const std::string& tex
 
 	if (!module_arbitor->ExecuteModule(__module_CoreProcP, vfn))
 	{
-		std::cout << "Failed to execute the ptype_module" << std::endl;
+		if (g_is_display)
+			std::cout << "Failed to execute the ptype_module" << std::endl;
 		return fail_ret("INVALID DATA IN GenerateTextObject!");
 	}
 	__update_picking_state(prim_obj, false);
@@ -1039,7 +1057,8 @@ bool vzm::GenerateMappingTable(const int table_size, const int num_alpha_ctrs, c
 	{
 		global_buf_obj->ClearAllBuffers();
 		global_buf_obj->ClearAllDstObjValues();
-		std::cout << "Failed to load the TMapGen" << std::endl;
+		if (g_is_display)
+			std::cout << "Failed to load the TMapGen" << std::endl;
 		if (is_new) res_manager->EraseVObject(tmap_id);
 		return fail_ret("INVALID DATA IN GenerateMappingTable!");
 	}
@@ -1930,7 +1949,8 @@ bool vzmproc::SimplifyPModelByUGrid(const int obj_src_id, const float cell_width
 
 	PrimitiveData* prim_src_data = prim_src_obj->GetPrimitiveData();
 	PrimitiveData* prim_dst_data = prim_dst_obj->GetPrimitiveData();
-	cout << "vertex number : " << prim_src_data->num_vtx << " to " << prim_dst_data->num_vtx << endl;
+	if (g_is_display)
+		cout << "vertex number : " << prim_src_data->num_vtx << " to " << prim_dst_data->num_vtx << endl;
 
 	//if (!is_new)
 	//{
@@ -1964,7 +1984,8 @@ bool vzmproc::GenerateSamplePoints(const int obj_src_id, const float* pos_src, c
 	vmfloat3 pos_src_3d = *(vmfloat3*)pos_src;
 	if (lpdll_function(prim_dst_obj, pos_src_3d, r, min_interval, prim_src_obj))
 	{
-		cout << "# of sample points : " << prim_dst_obj->GetPrimitiveData()->num_vtx << endl;
+		if (g_is_display)
+			cout << "# of sample points : " << prim_dst_obj->GetPrimitiveData()->num_vtx << endl;
 
 		//for (auto itg = gpu_manager.begin(); itg != gpu_manager.end(); itg++)
 		//	itg->second->ReleaseGpuResourcesBySrcID(obj_dst_id);

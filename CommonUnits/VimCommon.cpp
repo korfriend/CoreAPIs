@@ -2414,13 +2414,13 @@ ERROR_UpdateTagBlocks:
 			&& voaprim_res->prim_data.texture_res_info.size() == prim_data.texture_res_info.size())
 		{
 			// texture check
-			bool is_same_tx_vessel = true;
+			bool is_reuse = true;
 			for (auto it = prim_data.texture_res_info.begin(); it != prim_data.texture_res_info.end(); it++)
 			{
 				auto it_prev = voaprim_res->prim_data.texture_res_info.find(it->first);
 				if (it_prev == voaprim_res->prim_data.texture_res_info.end())
 				{
-					is_same_tx_vessel = false;
+					is_reuse = false;
 					break;
 				}
 				int new_w = std::get<0>(it->second);
@@ -2432,11 +2432,15 @@ ERROR_UpdateTagBlocks:
 				int prev_bytes_stride = std::get<2>(it_prev->second);
 				if (prev_w != new_w || prev_h != new_h || prev_bytes_stride != new_bytes_stride)
 				{
-					is_same_tx_vessel = false;
+					is_reuse = false;
 					break;
 				}
 			}
-			this->RegisterCustomParameter("_bool_ReuseGpuMemory", is_same_tx_vessel);
+			this->RegisterCustomParameter("_bool_ReuseGpuMemory", is_reuse);
+		}
+		else
+		{
+			this->RegisterCustomParameter("_bool_ReuseGpuMemory", false);
 		}
 
 		voaprim_res->prim_data.Delete();

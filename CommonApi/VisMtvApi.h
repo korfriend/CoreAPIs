@@ -208,6 +208,7 @@ namespace vzm
 
 	// only for the contributor's (by DongJoon Kim) test info.
 	__dojostatic void DebugTestSet(const std::string& _script, const void* _pvalue, const size_t size_bytes, const int scene_id, const int cam_id, const int obj_id = -1);
+	__dojostatic void DisplayConsoleMessages(const bool is_display);
 }
 
 namespace vzmproc
