@@ -3,7 +3,7 @@
 * wildcard : UsePrevVersion / VzThickness (global & local) / InteractionDrivenTest_VrLightPos / TestConsoleOut
 
 
-*********** ver. 1.3.a <2019.07.xx>
+*********** ver. 2.0.a <2019.08.xx>
 rendering engine uses recent direct3d runtime
 - feature level 12_1 (directx 11.3)
 
@@ -12,6 +12,7 @@ add the following features.
 - screen-space ambient occlusion
 - advanced k-buffer algorithm
 - vzm::PickObject also provides hit position defined in the world space (if this information is not necessary, set null)
+- vzm::GenerateCopiedObject provides new object copied from the source object
 - vzmproc::GenerateSamplePoints provides point cloud gathered around a given point (defined in the target model's object space)
 
 *********** ver. 1.2.d <2019.12.09>

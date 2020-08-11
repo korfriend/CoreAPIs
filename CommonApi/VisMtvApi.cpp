@@ -539,6 +539,22 @@ auto __GetPObject = [](int& obj_id) -> VmVObjectPrimitive*
 	return prim_obj;
 };
 
+auto __GetVObject = [](int& obj_id) -> VmVObjectVolume*
+{
+	VmVObjectVolume* vol_obj = (VmVObjectVolume*)res_manager->GetVObject(obj_id);
+	if (vol_obj == NULL)
+	{
+		vol_obj = new VmVObjectVolume();
+		obj_id = res_manager->RegisterVObject(vol_obj, ObjectTypeVOLUME);
+	}
+	//else
+	//{
+	//	for (auto itg = gpu_manager.begin(); itg != gpu_manager.end(); itg++)
+	//		itg->second->ReleaseGpuResourcesBySrcID(obj_id);
+	//}
+	return vol_obj;
+};
+
 bool vzm::GenerateArrowObject(const float* pos_s, const float* pos_e, const float radius, int& obj_id)
 {
 	VmVObjectPrimitive* prim_obj = __GetPObject(obj_id);
@@ -1065,6 +1081,138 @@ bool vzm::GenerateMappingTable(const int table_size, const int num_alpha_ctrs, c
 	global_buf_obj->ClearAllBuffers();
 	global_buf_obj->ClearAllDstObjValues();
 
+
+	return true;
+}
+
+bool vzm::GenerateCopiedObject(const int obj_src_id, int& obj_id)
+{
+	if (VmObject::GetObjectTypeFromID(obj_src_id) == ObjectTypePRIMITIVE)
+	{
+		VmVObjectPrimitive* prim_obj = __GetPObject(obj_id);
+
+		VmVObjectPrimitive* primsrc_obj = (VmVObjectPrimitive*)res_manager->GetVObject(obj_src_id);
+		if (primsrc_obj == NULL)
+			return false;
+
+		if ((PrimitiveData*)primsrc_obj->GetPrimitiveData() == NULL)
+			return false;
+
+		if ((PrimitiveData*)prim_obj->GetPrimitiveData() != NULL)
+			((PrimitiveData*)prim_obj->GetPrimitiveData())->Delete();
+
+		PrimitiveData* primdata_src = (PrimitiveData*)primsrc_obj->GetPrimitiveData();
+		PrimitiveData _primdata_src = *primdata_src;
+
+		_primdata_src.ClearVertexDefinitionContainer();
+		_primdata_src.vidx_buffer = NULL;
+
+		string vtypes[7] = {
+			"POSITION",
+			"NORMAL",
+			"TEXCOORD0",
+			"TEXCOORD1",
+			"TEXCOORD2",
+			"TEXCOORD3",
+			"TEXCOORD4"
+		};
+
+		for (int i = 0; i < (int)7; i++)
+		{
+			vmfloat3* pf3Vertex = primdata_src->GetVerticeDefinition(vtypes[i]);
+			if (pf3Vertex)
+			{
+				vmfloat3* pf3VertexNew = new vmfloat3[primdata_src->num_vtx];
+				memcpy(pf3VertexNew, pf3Vertex, sizeof(vmfloat3) * primdata_src->num_vtx);
+				_primdata_src.ReplaceOrAddVerticeDefinition(vtypes[i], pf3VertexNew);
+			}
+		}
+
+		_primdata_src.vidx_buffer = new uint[primdata_src->num_vidx];
+		memcpy(_primdata_src.vidx_buffer, primdata_src->vidx_buffer, sizeof(uint) * primdata_src->num_vidx);
+
+		if (primdata_src->texture_res_info.size() > 0)
+		{
+			// Always Byte Type
+			_primdata_src.texture_res_info = primdata_src->texture_res_info;
+			for (auto it = primdata_src->texture_res_info.begin(); it != primdata_src->texture_res_info.end(); it++)
+			{
+				int w = get<0>(it->second);
+				int h = get<1>(it->second);
+				int bypp = get<2>(it->second);
+
+				auto& dst = _primdata_src.texture_res_info[it->first];
+				get<3>(dst) = new byte[w * h * bypp];
+				memcpy(get<3>(dst), get<3>(it->second), w * h * bypp);
+			}
+		}
+
+		prim_obj->RegisterPrimitiveData(_primdata_src);
+
+		bool _visibility = true;
+		primsrc_obj->GetCustomParameter("_bool_visibility", data_type::dtype<bool>(), &_visibility);
+		vmdouble4 _color(1.);
+		primsrc_obj->GetCustomParameter("_double4_color", data_type::dtype<vmdouble4>(), &_color);
+		prim_obj->RegisterCustomParameter("_bool_visibility", _visibility);
+		prim_obj->RegisterCustomParameter("_double4_color", _color);
+		prim_obj->SetTransformMatrixOS2WS(primsrc_obj->GetMatrixOS2WS());
+		bool visibleWireSrc;
+		vmdouble4 wireframeColorSrc;
+		primsrc_obj->GetPrimitiveWireframeVisibilityColor(&visibleWireSrc, &wireframeColorSrc);
+		prim_obj->SetPrimitiveWireframeVisibilityColor(visibleWireSrc, wireframeColorSrc);
+
+		prim_obj->RemoveCustomDataStructures();
+		__update_picking_state(prim_obj, false);
+	}
+	else if (VmObject::GetObjectTypeFromID(obj_src_id) == ObjectTypeVOLUME)
+	{
+		VmVObjectVolume* vol_obj = __GetVObject(obj_id);
+
+		VmVObjectVolume* volsrc_obj = (VmVObjectVolume*)res_manager->GetVObject(obj_src_id);
+		if (volsrc_obj == NULL)
+			return false;
+
+		if ((VolumeData*)volsrc_obj->GetVolumeData() == NULL)
+			return false;
+
+		if ((VolumeData*)vol_obj->GetVolumeData() != NULL)
+			((VolumeData*)vol_obj->GetVolumeData())->Delete();
+
+		VolumeData* voldata_src = (VolumeData*)volsrc_obj->GetVolumeData();
+		VolumeData _voldata_src = *voldata_src;
+
+		_voldata_src.vol_slices = NULL;
+		_voldata_src.histo_values = NULL;
+
+		int iSizeOfSlice = (_voldata_src.vol_size.x + _voldata_src.bnd_size.x * 2)*(_voldata_src.vol_size.y + _voldata_src.bnd_size.y * 2);
+		AllocateVoidPointer2D(&_voldata_src.vol_slices,
+			_voldata_src.vol_size.z + _voldata_src.bnd_size.z * 2, iSizeOfSlice * _voldata_src.store_dtype.type_bytes);
+
+		int iSizeOfType = _voldata_src.store_dtype.type_bytes;
+		for (int i = 0; i < _voldata_src.vol_size.z + _voldata_src.bnd_size.z * 2; i++)
+		{
+			memcpy(_voldata_src.vol_slices[i], voldata_src->vol_slices[i], iSizeOfSlice*iSizeOfType);
+		}
+
+		uint uiRangeHistogram = _voldata_src.GetHistogramSize();
+		_voldata_src.histo_values = new ullong[uiRangeHistogram];
+
+		memcpy(_voldata_src.histo_values, voldata_src->histo_values, uiRangeHistogram * sizeof(ullong));
+
+		if (volsrc_obj->GetVolumeBlock(0) == NULL)
+		{
+			vol_obj->RegisterVolumeData(_voldata_src, NULL, 0);
+		}
+		else
+		{
+			vmint3 i3BlockSizes[2] = { volsrc_obj->GetVolumeBlock(0)->blk_vol_size, volsrc_obj->GetVolumeBlock(1)->blk_vol_size };
+			vol_obj->RegisterVolumeData(_voldata_src, i3BlockSizes, 0);
+		}
+
+		vol_obj->SetTransformMatrixOS2WS(volsrc_obj->GetMatrixOS2WS());
+	}
+	else 
+		return false;
 
 	return true;
 }
@@ -1855,7 +2003,8 @@ typedef struct __float3__
 #define __cm4__ *(glm::fmat4x4*)
 #define __cm4d__ *(glm::dmat4x4*)
 
-bool helpers::ComputeRigidTransform(const float* xyz_from_list, const float* xyz_to_list, const int num_pts, float(&mat_tr)[16])
+//bool helpers::ComputeRigidTransform(const float* xyz_from_list, const float* xyz_to_list, const int num_pts, float(&mat_tr)[16])
+bool helpers::ComputeRigidTransform(const float* xyz_from_list, const float* xyz_to_list, const int num_pts, float* mat_tr /*float16*/)
 {
 	typedef bool(*LPDLL_CALL_PAIRMATCHING)(double(&mat)[16],
 		const std::vector<std::pair<int, int>>& match_pairs,
@@ -1995,7 +2144,8 @@ bool vzmproc::GenerateSamplePoints(const int obj_src_id, const float* pos_src, c
 	return false;
 }
 
-bool vzmproc::ComputePCA(const int obj_id, float(&egvals)[3], float(&egvecs)[9])
+//__dojostatic bool ComputePCA(const int obj_id, float(&egvals)[3], float(&egvecs)[9]);
+bool vzmproc::ComputePCA(const int obj_id, float* egvals /*float3*/, float* egvecs /*three of float3*/)
 {
 	VmVObjectPrimitive* prim_src_obj = (VmVObjectPrimitive*)res_manager->GetVObject(obj_id);
 	if (prim_src_obj == NULL)
@@ -2012,7 +2162,8 @@ bool vzmproc::ComputePCA(const int obj_id, float(&egvals)[3], float(&egvecs)[9])
 	return ret;
 }
 
-bool helpers::ComputePCAc(const float* xyz_list, const int num_points, float(&egvals)[3], float(&egvecs)[9])
+//bool helpers::ComputePCAc(const float* xyz_list, const int num_points, float(&egvals)[3], float(&egvecs)[9])
+bool helpers::ComputePCAc(const float* xyz_list, const int num_points, float* egvals /*float3*/, float* egvecs /*three of float3*/)
 {
 	typedef bool(*LPDLL_CALL_PCA)(float(&mat)[16],
 		std::vector<float>& eigen_values, std::vector<__float3>& eigen_vectors,
