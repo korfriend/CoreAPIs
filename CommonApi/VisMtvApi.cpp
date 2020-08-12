@@ -2356,7 +2356,7 @@ bool helpers::ComputeCameraRendererParameters(const float* pos_xyz_ws, const flo
 }
 
 bool helpers::ComputeArCameraCalibrateInfo(const float* mat_camrbs2ws, const float* calrb_xyz_ws, const float* calrb_xy_ss, const int num_mks,
-	const float* mat_camcs2camrbs, CameraParameters& cam_ar_mode_params)
+	const float* mat_camcs2camrbs, CameraParameters* cam_ar_mode_params)
 {
 	glm::fmat4x4& fmat_camrb2ws = *(glm::fmat4x4*)mat_camrbs2ws;
 
@@ -2391,18 +2391,22 @@ bool helpers::ComputeArCameraCalibrateInfo(const float* mat_camrbs2ws, const flo
 	glm::fvec3 cam_up_crbs = tr_nrvec(mat_cam2rbcam, cam_up);
 	glm::fvec3 cam_view_crbs = tr_nrvec(mat_cam2rbcam, cam_view);
 
-	__cm4__ mat_camcs2camrbs = glm::lookAtRH(cam_pos_crbs, cam_pos_crbs + cam_view_crbs, cam_up_crbs);
+	if(mat_camcs2camrbs)
+		__cm4__ mat_camcs2camrbs = glm::lookAtRH(cam_pos_crbs, cam_pos_crbs + cam_view_crbs, cam_up_crbs);
 
-	cam_ar_mode_params.fx = _fx;
-	cam_ar_mode_params.fy = _fy;
-	cam_ar_mode_params.sc = _sc;
-	cam_ar_mode_params.cx = _cx;
-	cam_ar_mode_params.cy = _cy;
-	cam_ar_mode_params.projection_mode = 3;
+	if (cam_ar_mode_params)
+	{
+		cam_ar_mode_params->fx = _fx;
+		cam_ar_mode_params->fy = _fy;
+		cam_ar_mode_params->sc = _sc;
+		cam_ar_mode_params->cx = _cx;
+		cam_ar_mode_params->cy = _cy;
+		cam_ar_mode_params->projection_mode = 3;
 
-	*(glm::fvec3*)cam_ar_mode_params.pos = tr_pt(fmat_camrb2ws, cam_pos_crbs);
-	*(glm::fvec3*)cam_ar_mode_params.up = tr_nrvec(fmat_camrb2ws, cam_up_crbs);
-	*(glm::fvec3*)cam_ar_mode_params.view = tr_nrvec(fmat_camrb2ws, cam_view_crbs);
+		*(glm::fvec3*)cam_ar_mode_params->pos = tr_pt(fmat_camrb2ws, cam_pos_crbs);
+		*(glm::fvec3*)cam_ar_mode_params->up = tr_nrvec(fmat_camrb2ws, cam_up_crbs);
+		*(glm::fvec3*)cam_ar_mode_params->view = tr_nrvec(fmat_camrb2ws, cam_view_crbs);
+	}
 
 	return true;
 }
