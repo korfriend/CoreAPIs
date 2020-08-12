@@ -2355,7 +2355,59 @@ bool helpers::ComputeCameraRendererParameters(const float* pos_xyz_ws, const flo
 	return true;
 }
 
-bool helpers::ComputeArCameraCalibrateInfo(const float* mat_camrb2ws, const float* calrb_xyz_ws, const float* calrb_xy_ss, const int num_mks,
+bool helpers::ComputeArCameraCalibrateInfo(const float* mat_camrbs2ws, const float* calrb_xyz_ws, const float* calrb_xy_ss, const int num_mks,
+	const float* mat_camcs2camrbs, CameraParameters& cam_ar_mode_params)
+{
+	glm::fmat4x4& fmat_camrb2ws = *(glm::fmat4x4*)mat_camrbs2ws;
+
+	glm::fvec3 cam_pos_ws, cam_up_ws, cam_view_ws;
+	float _fx, _fy, _sc, _cx, _cy;
+	helpers::ComputeCameraRendererParameters(calrb_xyz_ws, calrb_xy_ss, num_mks, &cam_pos_ws[0], &cam_view_ws[0], &cam_up_ws[0], &_fx, &_fy, &_sc, &_cx, &_cy);
+
+	glm::fmat4x4 mat_ws2cam;
+	fMatrixWS2CS(&mat_ws2cam, &cam_pos_ws, &cam_up_ws, &cam_view_ws);
+	mat_ws2cam = glm::transpose(mat_ws2cam);
+	glm::fmat4x4 mat_rbcam2cam = mat_ws2cam * fmat_camrb2ws;
+	glm::fmat4x4 mat_cam2rbcam = glm::inverse(mat_rbcam2cam);
+	glm::fmat3x3 mat_cam2rbcam_r = mat_cam2rbcam;
+
+
+	auto tr_pt = [](const glm::fmat4x4& mat, const glm::fvec3& p) -> glm::fvec3
+	{
+		glm::fvec4 _p(p, 1.f);
+		_p = mat * _p;
+		return glm::fvec3(_p.x / _p.w, _p.y / _p.w, _p.z / _p.w);
+	};
+	auto tr_nrvec = [](const glm::fmat4x4& mat, const glm::fvec3& v) -> glm::fvec3
+	{
+		glm::fmat3x3 mat_r = mat;
+		return glm::normalize(mat_r * v);
+	};
+
+	glm::fvec3 cam_pos(0);
+	glm::fvec3 cam_up(0, 1, 0);
+	glm::fvec3 cam_view(0, 0, -1);
+	glm::fvec3 cam_pos_crbs = tr_pt(mat_cam2rbcam, cam_pos);
+	glm::fvec3 cam_up_crbs = tr_nrvec(mat_cam2rbcam, cam_up);
+	glm::fvec3 cam_view_crbs = tr_nrvec(mat_cam2rbcam, cam_view);
+
+	__cm4__ mat_camcs2camrbs = glm::lookAtRH(cam_pos_crbs, cam_pos_crbs + cam_view_crbs, cam_up_crbs);
+
+	cam_ar_mode_params.fx = _fx;
+	cam_ar_mode_params.fy = _fy;
+	cam_ar_mode_params.sc = _sc;
+	cam_ar_mode_params.cx = _cx;
+	cam_ar_mode_params.cy = _cy;
+	cam_ar_mode_params.projection_mode = 3;
+
+	*(glm::fvec3*)cam_ar_mode_params.pos = tr_pt(fmat_camrb2ws, cam_pos_crbs);
+	*(glm::fvec3*)cam_ar_mode_params.up = tr_nrvec(fmat_camrb2ws, cam_up_crbs);
+	*(glm::fvec3*)cam_ar_mode_params.view = tr_nrvec(fmat_camrb2ws, cam_view_crbs);
+
+	return true;
+}
+
+bool __ComputeArCameraCalibrateInfo(const float* mat_camrb2ws, const float* calrb_xyz_ws, const float* calrb_xy_ss, const int num_mks,
 	float* cam_pos_crbs, float* cam_view_crbs, float* cam_up_crbs, CameraParameters& cam_ar_mode_params)
 {
 	glm::fmat4x4& fmat_camrb2ws = *(glm::fmat4x4*)mat_camrb2ws;
