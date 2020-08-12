@@ -1635,21 +1635,6 @@ bool vzm::RenderScene(const int scene_id, const int cam_id)
 	}
 
 
-	// test for individual obj //
-	// _int_RendererType
-	std::map<int/*obj_id*/, std::map<std::string, std::tuple<size_t, byte*>>>& cam_container = _test_dojo_scripts[std::tuple<int, int>(scene_id, cam_id)];
-	for (auto it_obj = cam_container.begin(); it_obj != cam_container.end(); it_obj++)
-	{
-		int obj_id = it_obj->first;
-		for (auto it_obj_v = it_obj->second.begin(); it_obj_v != it_obj->second.end(); it_obj_v++)
-		{
-			const string& str = it_obj_v->first;
-			const size_t size_bytes = std::get<0>(it_obj_v->second);
-			const byte* pv = std::get<1>(it_obj_v->second);
-			cam_res.scene_lbuf_obj->ReplaceOrAddDstObjValue(obj_id, str, pv, size_bytes);
-		}
-	}
-
 	/////////////////////////////////////
 	// Set Function Parameters
 	/////////////////////////////////////
@@ -1693,6 +1678,8 @@ bool vzm::RenderScene(const int scene_id, const int cam_id)
 	vfn_common.vmparams.insert(pair<string, void*>("_double_SSAOTangentBias", &tangent_bias));
 	vfn_common.vmparams.insert(pair<string, void*>("_bool_BlurSSAO", &smooth_filter));
 
+	// test for individual obj //
+	// _int_RendererType
 	// test for vfn_common //
 	// _bool_TestOit
 	// _bool_ReloadHLSLObjFiles
@@ -1702,6 +1689,21 @@ bool vzm::RenderScene(const int scene_id, const int cam_id)
 	// _bool_IsLightOnCamera
 	// _bool_IsPointSpotLight
 	// _double3_PosLightWS
+	std::map<int/*obj_id*/, std::map<std::string, std::tuple<size_t, byte*>>>& cam_container = _test_dojo_scripts[std::tuple<int, int>(scene_id, cam_id)];
+	for (auto it_obj = cam_container.begin(); it_obj != cam_container.end(); it_obj++)
+	{
+		int obj_id = it_obj->first;
+		for (auto it_obj_v = it_obj->second.begin(); it_obj_v != it_obj->second.end(); it_obj_v++)
+		{
+			const string& str = it_obj_v->first;
+			const size_t size_bytes = std::get<0>(it_obj_v->second);
+			byte* pv = std::get<1>(it_obj_v->second);
+			if (obj_id > 0)
+				cam_res.scene_lbuf_obj->ReplaceOrAddDstObjValue(obj_id, str, pv, size_bytes);
+			else
+				vfn_common.vmparams.insert(pair<string, void*>(str, pv));
+		}
+	}
 	std::map<int/*obj_id*/, std::map<std::string, std::tuple<size_t, byte*>>>& gobal_param_container = _test_dojo_scripts[std::tuple<int, int>(-1, -1)];
 	for (auto it_gp = gobal_param_container.begin(); it_gp != gobal_param_container.end(); it_gp++)
 	{
@@ -1863,6 +1865,8 @@ bool vzm::GetPModelData(const int obj_id, float** pos_vtx, float** nrl_vtx, floa
 
 bool vzm::ValidatePickTarget(const int obj_id)
 {
+	if (VmObject::GetObjectTypeFromID(obj_id) != ObjectTypePRIMITIVE)
+		return fail_ret("Only primitive model is allowed : " + to_string(obj_id));
 	VmVObjectPrimitive* prim_obj = (VmVObjectPrimitive*)res_manager->GetVObject(obj_id);
 	if (prim_obj == NULL)
 		return fail_ret("NO OBJECT! id : " + to_string(obj_id));
