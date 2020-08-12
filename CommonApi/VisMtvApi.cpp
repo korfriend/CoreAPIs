@@ -1209,6 +1209,10 @@ bool vzm::GenerateCopiedObject(const int obj_src_id, int& obj_id)
 			vol_obj->RegisterVolumeData(_voldata_src, i3BlockSizes, 0);
 		}
 
+		vmmat44 ori_mat_vs2os;
+		volsrc_obj->GetCustomParameter("_matrix_originalOS2WS", data_type::dtype<vmmat44>(), &ori_mat_vs2os);
+		vol_obj->RegisterCustomParameter("_matrix_originalOS2WS", ori_mat_vs2os);
+
 		vol_obj->SetTransformMatrixOS2WS(volsrc_obj->GetMatrixOS2WS());
 	}
 	else 
@@ -1471,7 +1475,7 @@ bool vzm::SetSceneEnvParameters(const int scene_id, const SceneEnvParameters& en
 	return true;
 }
 
-bool vzm::GetCamProjMatrix(const int scene_id, const int cam_id, float* mat_ws2ss, float* mat_ss2ws)
+bool vzm::GetCamProjMatrix(const int scene_id, const int cam_id, float* mat_ws2ss, float* mat_ss2ws, const bool is_col_major)
 {
 	auto it = scene_manager.find(scene_id);
 	if (it == scene_manager.end())
@@ -1490,13 +1494,15 @@ bool vzm::GetCamProjMatrix(const int scene_id, const int cam_id, float* mat_ws2s
 	{
 		vmmat44 ws2cs, cs2ps, ps2ss;
 		cam_obj->GetMatrixWStoSS(&ws2cs, &cs2ps, &ps2ss);
-		*(vmmat44f*)mat_ws2ss = ws2cs * cs2ps * ps2ss;
+		vmmat44 ws2ss = ws2cs * cs2ps * ps2ss;
+		*(vmmat44f*)mat_ws2ss = is_col_major ? glm::transpose(ws2ss) : ws2ss;
 	}
 	if (mat_ss2ws)
 	{
 		vmmat44 ss2ps, ps2cs, cs2ws;
 		cam_obj->GetMatrixSStoWS(&ss2ps, &ps2cs, &cs2ws);
-		*(vmmat44f*)mat_ss2ws = ss2ps * ps2cs * cs2ws;
+		vmmat44 ss2ws = ss2ps * ps2cs * cs2ws;
+		*(vmmat44f*)mat_ss2ws = is_col_major ? glm::transpose(ss2ws) : ss2ws;
 	}
 	return true;
 }
@@ -1975,6 +1981,36 @@ bool vzm::PickObject(int& pick_obj_id, float* pos_pick, const int x, const int y
 	}
 
 	return false;
+}
+
+bool vzm::Pick1stHitSurfaceUsingDepthMap(float* pos_pick, const int x, const int y, const float valid_depth_range, const int scene_id, const int cam_id)
+{
+	unsigned char* ptr_rgba;
+	float* ptr_zdepth;
+	int w, h;
+	if (!GetRenderBufferPtrs(scene_id, &ptr_rgba, &ptr_zdepth, &w, &h, cam_id)) 
+		return fail_ret("Pick1stHitSurfaceUsingDepthMap :: NO buffers! (scene_id, cam_id): " + to_string(scene_id) + ", " + to_string(cam_id));
+
+	float depth = ptr_zdepth[x + y * w];
+	if (depth >= valid_depth_range) 
+		return fail_ret("Pick1stHitSurfaceUsingDepthMap :: z depth is out of range : " + to_string(depth));
+	// note that 3D view is always perspective
+	CameraParameters camstate;
+	GetCameraParameters(scene_id, camstate, cam_id);
+	vmfloat3 pos_cam = __cv3__ camstate.pos;
+
+	vmmat44f mat_ws2ss, mat_ss2ws;
+	GetCamProjMatrix(scene_id, cam_id, __FP mat_ws2ss, __FP mat_ss2ws, false);
+
+	vmfloat3 pick_pos_ss = glm::fvec3(x, y, 0);
+	vmfloat3 pick_pos_ws, pick_dir_ws;
+	fTransformPoint(&pick_pos_ws, &pick_pos_ss, &mat_ss2ws);
+	pick_dir_ws = pick_pos_ws - pos_cam;
+	fNormalizeVector(&pick_dir_ws, &pick_dir_ws);
+
+	vmfloat3 pos_hit = pick_pos_ws + pick_dir_ws * depth;
+	__cv3__ pos_pick = pos_hit;
+	return true;
 }
 
 bool ReplaceOrAddArrowObject(const int scene_id, int& obj_id, const vzm::ObjStates& obj_states, const float* pos_s, const float* pos_e, const float radius)
