@@ -2639,8 +2639,16 @@ bool helpers::arcball::pan_move(const int* pos_xy, cam_pose& cam_pose)
 		glm::dvec3 diff_ws = pos_cur_ws - pos_old_ws;
 
 		if (glm::length(diff_ws) < DBL_EPSILON)
+		{
+			__cv3__ cam_pose.pos = (glm::fvec3)(cam_pose_begin.d3PosCamera);
+			__cv3__ cam_pose.up = (glm::fvec3)(cam_pose_begin.v3VecUp);
+			__cv3__ cam_pose.view = (glm::fvec3)(cam_pose_begin.v3VecView);
 			return true;
+		}
 
+		//cout << "-----0> " << glm::length(diff_ws) << endl;
+		//cout << "-----1> " << pos.x << ", " << pos.y << endl;
+		//cout << "-----2> " << arc_ball.__start_x << ", " << arc_ball.__start_y << endl;
 		glm::dvec3 pos_center_ws = arc_ball.GetCenterStage();
 		glm::dvec3 vec_eye2center_ws = pos_center_ws - cam_pose_begin.d3PosCamera;
 
