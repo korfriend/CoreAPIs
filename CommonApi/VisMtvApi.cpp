@@ -2319,7 +2319,7 @@ bool helpers::ComputeCameraRendererParameters(const float* pos_xyz_ws, const flo
 	memcpy(&ss_xy_pts[0], pos_xy_ss, sizeof(float) * num_mks * 2);
 
 	fmat4x3 mat_p4x3;
-	lpdll_function_mpaam((float*)&mat_p4x3, ws_xyz_pts, ss_xy_pts, true); // dlt_mode == false 일 경우, 상이 역으로 맺히는 경우도 발생..
+	lpdll_function_mpaam((float*)&mat_p4x3, ws_xyz_pts, ss_xy_pts, false); // dlt_mode == false 일 경우, 상이 역으로 맺히는 경우도 발생..
 	fmat4x3 mat_ext4x3;
 	fmat3x3 mat_int3x3;
 	lpdll_function_decomp((float*)&mat_ext4x3, (float*)&mat_int3x3, (float*)&mat_p4x3, false);
@@ -2355,23 +2355,9 @@ bool helpers::ComputeCameraRendererParameters(const float* pos_xyz_ws, const flo
 	return true;
 }
 
-bool helpers::ComputeArCameraCalibrateInfo(const float* mat_camrbs2ws, const float* calrb_xyz_ws, const float* calrb_xy_ss, const int num_mks,
-	const float* mat_camcs2camrbs, CameraParameters* cam_ar_mode_params)
+bool helpers::ComputeArCameraCalibrateInfo(const float* mat_rbs2ts, const float* calrb_xyz_ts, const float* calrb_xy_ss, const int num_mks,
+	float* mat_camcs2rbs, CameraParameters* cam_ar_mode_params)
 {
-	glm::fmat4x4& fmat_camrb2ws = *(glm::fmat4x4*)mat_camrbs2ws;
-
-	glm::fvec3 cam_pos_ws, cam_up_ws, cam_view_ws;
-	float _fx, _fy, _sc, _cx, _cy;
-	helpers::ComputeCameraRendererParameters(calrb_xyz_ws, calrb_xy_ss, num_mks, &cam_pos_ws[0], &cam_view_ws[0], &cam_up_ws[0], &_fx, &_fy, &_sc, &_cx, &_cy);
-
-	glm::fmat4x4 mat_ws2cam;
-	fMatrixWS2CS(&mat_ws2cam, &cam_pos_ws, &cam_up_ws, &cam_view_ws);
-	mat_ws2cam = glm::transpose(mat_ws2cam);
-	glm::fmat4x4 mat_rbcam2cam = mat_ws2cam * fmat_camrb2ws;
-	glm::fmat4x4 mat_cam2rbcam = glm::inverse(mat_rbcam2cam);
-	glm::fmat3x3 mat_cam2rbcam_r = mat_cam2rbcam;
-
-
 	auto tr_pt = [](const glm::fmat4x4& mat, const glm::fvec3& p) -> glm::fvec3
 	{
 		glm::fvec4 _p(p, 1.f);
@@ -2384,15 +2370,37 @@ bool helpers::ComputeArCameraCalibrateInfo(const float* mat_camrbs2ws, const flo
 		return glm::normalize(mat_r * v);
 	};
 
-	glm::fvec3 cam_pos(0);
-	glm::fvec3 cam_up(0, 1, 0);
-	glm::fvec3 cam_view(0, 0, -1);
-	glm::fvec3 cam_pos_crbs = tr_pt(mat_cam2rbcam, cam_pos);
-	glm::fvec3 cam_up_crbs = tr_nrvec(mat_cam2rbcam, cam_up);
-	glm::fvec3 cam_view_crbs = tr_nrvec(mat_cam2rbcam, cam_view);
+	glm::fmat4x4& fmat_rbs2ts = *(glm::fmat4x4*)mat_rbs2ts;
 
-	if(mat_camcs2camrbs)
-		__cm4__ mat_camcs2camrbs = glm::lookAtRH(cam_pos_crbs, cam_pos_crbs + cam_view_crbs, cam_up_crbs);
+	glm::fvec3 cam_pos_ts, cam_up_ts, cam_view_ts;
+	float _fx, _fy, _sc, _cx, _cy;
+	helpers::ComputeCameraRendererParameters(calrb_xyz_ts, calrb_xy_ss, num_mks, &cam_pos_ts[0], &cam_view_ts[0], &cam_up_ts[0], &_fx, &_fy, &_sc, &_cx, &_cy);
+
+	glm::fmat4x4 mat_ts2camcs;
+	fMatrixWS2CS(&mat_ts2camcs, &cam_pos_ts, &cam_up_ts, &cam_view_ts); // note the convention of vis_motive core is row major
+	mat_ts2camcs = glm::transpose(mat_ts2camcs);
+
+	{
+		// 
+		glm::fvec3 pos_sample_ts = __cv3__ calrb_xyz_ts; // 1st item
+		glm::fvec3 pos_camcs = tr_pt(mat_ts2camcs, pos_sample_ts);
+		//cout << "z : " << pos_camcs.z << endl;
+		if (pos_camcs.z > 0)
+		{
+			glm::fmat4x4 mat_reverse = glm::scale(glm::fvec3(-1));
+			mat_ts2camcs = mat_reverse * mat_ts2camcs;
+		}
+	}
+
+	glm::fmat4x4 mat_rbs2camcs = mat_ts2camcs * fmat_rbs2ts;
+	glm::fmat4x4 fmat_camcs2rbs = glm::inverse(mat_rbs2camcs);
+
+	if(mat_camcs2rbs)
+		__cm4__ mat_camcs2rbs = fmat_camcs2rbs;
+
+	//
+	//if(mat_camcs2rbs)
+	//	__cm4__ mat_camcs2rbs = glm::lookAtRH(cam_pos_rbs, cam_pos_rbs + cam_view_rbs, cam_up_rbs);
 
 	if (cam_ar_mode_params)
 	{
@@ -2403,10 +2411,53 @@ bool helpers::ComputeArCameraCalibrateInfo(const float* mat_camrbs2ws, const flo
 		cam_ar_mode_params->cy = _cy;
 		cam_ar_mode_params->projection_mode = 3;
 
-		*(glm::fvec3*)cam_ar_mode_params->pos = tr_pt(fmat_camrb2ws, cam_pos_crbs);
-		*(glm::fvec3*)cam_ar_mode_params->up = tr_nrvec(fmat_camrb2ws, cam_up_crbs);
-		*(glm::fvec3*)cam_ar_mode_params->view = tr_nrvec(fmat_camrb2ws, cam_view_crbs);
+		glm::fvec3 cam_pos(0);
+		glm::fvec3 cam_up(0, 1, 0);
+		glm::fvec3 cam_view(0, 0, -1);
+		glm::fvec3 cam_pos_rbs = tr_pt(fmat_camcs2rbs, cam_pos);
+		glm::fvec3 cam_up_rbs = tr_nrvec(fmat_camcs2rbs, cam_up);
+		glm::fvec3 cam_view_rbs = tr_nrvec(fmat_camcs2rbs, cam_view);
+		
+		*(glm::fvec3*)cam_ar_mode_params->pos = tr_pt(fmat_rbs2ts, cam_pos_rbs);
+		*(glm::fvec3*)cam_ar_mode_params->up = tr_nrvec(fmat_rbs2ts, cam_up_rbs);
+		*(glm::fvec3*)cam_ar_mode_params->view = tr_nrvec(fmat_rbs2ts, cam_view_rbs);
 	}
+
+	// test code
+	//{
+	//	glm::fvec3 cam_pos_clf, cam_up_clf, cam_view_clf;
+	//	float _fx, _fy, _sc, _cx, _cy;
+	//	helpers::ComputeCameraRendererParameters(__FP point3d[0], __FP point2d[0], num_stg_calib_pairs, __FP cam_pos_clf, __FP cam_view_clf, __FP cam_up_clf, &_fx, &_fy, &_sc, &_cx, &_cy);
+	//	//TESTOUT("cam_pos_clf : ", cam_pos_clf);
+	//	//TESTOUT("cam_view_clf : ", cam_pos_clf);
+	//	//TESTOUT("cam_view_clf : ", cam_pos_clf);
+	//
+	//	glm::fmat4x4 mat_clf2stgcs = MatrixWS2CS(cam_pos_clf, cam_view_clf, cam_up_clf);
+	//	mat_stgcs2clf = glm::inverse(mat_clf2stgcs);
+	//	
+	//	// TO DO // WHY??????????????????????????????? 4
+	//	cam_state_calbirated.fx = _fx / 4;
+	//	cam_state_calbirated.fy = _fy / 4;
+	//	cam_state_calbirated.sc = _sc / 4;
+	//	cam_state_calbirated.cx = _cx / 4;
+	//	cam_state_calbirated.cy = _cy / 4;
+	//
+	//
+	//	// to clf
+	//	__cv3__ cam_state_calbirated.pos = tr_pt(mat_stgcs2clf, glm::fvec3(0));
+	//	__cv3__ cam_state_calbirated.up = glm::normalize(tr_vec(mat_stgcs2clf, glm::fvec3(0, 1, 0)));
+	//	__cv3__ cam_state_calbirated.view = glm::normalize(tr_vec(mat_stgcs2clf, glm::fvec3(0, 0, -1)));
+	//
+	//	//cout << "intrinsics : " << _fx << ", " << _fy << ", " << _sc << ", " << _cx << ", " << _cy << endl;
+	//	glm::fmat4x4 mat_ws2stgcs = mat_clf2stgcs * mat_ws2clf;
+	//	glm::fvec3 pos_stgcs = tr_pt(mat_ws2stgcs, ws_mk_spheres_xyzr[0]);
+	//	cout << "z : " << pos_stgcs.z << endl;
+	//	if (pos_stgcs.z > 0)
+	//	{
+	//		glm::fmat4x4 mat_reverse = glm::scale(glm::fvec3(-1));
+	//		mat_stgcs2clf = mat_reverse * mat_stgcs2clf;
+	//	}
+	//}
 
 	return true;
 }
