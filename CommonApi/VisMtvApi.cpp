@@ -2319,7 +2319,7 @@ bool helpers::ComputeCameraRendererParameters(const float* pos_xyz_ws, const flo
 	memcpy(&ss_xy_pts[0], pos_xy_ss, sizeof(float) * num_mks * 2);
 
 	fmat4x3 mat_p4x3;
-	lpdll_function_mpaam((float*)&mat_p4x3, ws_xyz_pts, ss_xy_pts, false); // dlt_mode == false 일 경우, 상이 역으로 맺히는 경우도 발생..
+	lpdll_function_mpaam((float*)&mat_p4x3, ws_xyz_pts, ss_xy_pts, false); // false (Jacobian SVD) is much more accurate than false (DLT mode)
 	fmat4x3 mat_ext4x3;
 	fmat3x3 mat_int3x3;
 	lpdll_function_decomp((float*)&mat_ext4x3, (float*)&mat_int3x3, (float*)&mat_p4x3, false);
