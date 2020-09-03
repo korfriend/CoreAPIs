@@ -6,7 +6,6 @@
 
 using namespace std;
 
-
 #include "nanoflann.hpp"
 //using namespace nanoflann;
 template <typename T, typename TT>
@@ -46,11 +45,62 @@ struct PointCloud
 	bool kdtree_get_bbox(BBOX&) const { return false; }
 };
 
+//template <typename T, typename TT, typename MAT>
+//struct PointCloudTr
+//{
+//	//public:
+//	const uint num_vtx;
+//	const TT* pts;
+//	MAT mat_tr; // default is the identity
+//	PointCloudTr(const TT* _pts, const uint _num_vtx) : pts(_pts), num_vtx(_num_vtx) { }
+//	PointCloudTr(const TT* _pts, const uint _num_vtx, const MAT& _mat_tr) : pts(_pts), num_vtx(_num_vtx), mat_tr(_mat_tr) { }
+//
+//	// Must return the number of data points
+//	inline size_t kdtree_get_point_count() const { return num_vtx; }
+//
+//	// Returns the distance between the vector "p1[0:size-1]" and the data point with index "idx_p2" stored in the class:
+//	inline T kdtree_distance(const T *p1, const size_t idx_p2, size_t) const
+//	{
+//		TT pt_tr;
+//		fTransformPoint(&pt_tr, &pts[idx_p2], &mat_tr);
+//
+//		const T d0 = p1[0] - pt_tr.x;
+//		const T d1 = p1[1] - pt_tr.y;
+//		const T d2 = p1[2] - pt_tr.z;
+//		return d0 * d0 + d1 * d1 + d2 * d2;
+//	}
+//
+//	// Returns the dim'th component of the idx'th point in the class:
+//	// Since this is inlined and the "dim" argument is typically an immediate value, the
+//	//  "if/else's" are actually solved at compile time.
+//	inline T kdtree_get_pt(const size_t idx, int dim) const
+//	{
+//		TT pt_tr;
+//		fTransformPoint(&pt_tr, &pts[idx], &mat_tr);
+//
+//		if (dim == 0) return pt_tr.x;
+//		else if (dim == 1) return pt_tr.y;
+//		else return pt_tr.z;
+//	}
+//
+//	// Optional bounding-box computation: return false to default to a standard bbox computation loop.
+//	//   Return true if the BBOX was already computed by the class and returned in "bb" so it can be avoided to redo it again.
+//	//   Look at bb.size() to find out the expected dimensionality (e.g. 2 or 3 for point clouds)
+//	template <class BBOX>
+//	bool kdtree_get_bbox(BBOX&) const { return false; }
+//};
+
 typedef nanoflann::KDTreeSingleIndexAdaptor<
 	nanoflann::L2_Simple_Adaptor<float, PointCloud<float, vmfloat3> >,
 	PointCloud<float, vmfloat3>,
 	3 // dim 
 > kd_tree_t;
+
+//typedef nanoflann::KDTreeSingleIndexAdaptor<
+//	nanoflann::L2_Simple_Adaptor<float, PointCloudTr<float, vmfloat3, vmmat44f> >,
+//	PointCloudTr<float, vmfloat3, vmmat44f>,
+//	3 // dim 
+//> kd_tree_t_tr;
 
 namespace vmobjects {
 	string dtype_bool_name = typeid(bool).name();
@@ -2310,6 +2360,7 @@ ERROR_UpdateTagBlocks:
 #pragma endregion
 	
 #pragma region // VmVObjectPrimitive //
+	//typedef pair<PointCloudTr<float, vmfloat3, vmmat44f>*, kd_tree_t_tr*> kdtpc;
 	struct VObjectPrimitiveArchive
 	{
 		PrimitiveData prim_data;
@@ -2318,6 +2369,7 @@ ERROR_UpdateTagBlocks:
 
 		PointCloud<float, vmfloat3>* pc;
 		kd_tree_t* kdt;
+		//map<string, kdtpc> map_kdts;
 		int num_kdt_updated;
 	
 		VObjectPrimitiveArchive()
@@ -2339,6 +2391,15 @@ ERROR_UpdateTagBlocks:
 	VmVObjectPrimitive::~VmVObjectPrimitive()
 	{
 		voaprim_res->prim_data.Delete();
+
+		//for (auto it = voaprim_res->map_kdts.begin(); it != voaprim_res->map_kdts.end(); it++)
+		//{
+		//	kdtpc& _kp = it->second;
+		//	delete get<0>(_kp);
+		//	delete get<1>(_kp);
+		//}
+		//voaprim_res->map_kdts.clear();
+
 		VMSAFE_DELETE(voaprim_res->kdt);
 		VMSAFE_DELETE(voaprim_res->pc);
 		VMSAFE_DELETE(voaprim_res);
@@ -2520,6 +2581,9 @@ ERROR_UpdateTagBlocks:
 		if (voaprim_res->kdt == NULL) return 0;
 		return (uint)voaprim_res->kdt->knnSearch((float*)&p_src, k, out_ids, out_dists, 10);
 	}
+
+
+
 #pragma endregion
 	
 #pragma region // VmLObject //

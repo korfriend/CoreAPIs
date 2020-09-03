@@ -1,5 +1,5 @@
-#include "VisMtvApi.h"
 #include "VimCommon.h"
+#include "VisMtvApi.h"
 #include "../GpuManager/GpuManager.h"
 #include "ModuleArbiter.h"
 #include "ResourceManager.h"
@@ -250,6 +250,38 @@ void vzm::DebugTestSet(const std::string& _script, const void* _pvalue, const si
 void vzm::DisplayConsoleMessages(const bool is_display)
 {
 	g_is_display = is_display;
+}
+
+bool vzm::ExecuteModule2(const std::string& module_dll_file, const std::string& dll_function, const std::initializer_list<int>& io_obj_ids, const std::map<string, any>& parameters)
+{
+	typedef bool(*LPDLL_CALL_FUNTION)(const std::vector<vmobjects::VmObject*>& io_objs, const std::map<string, any>& parameters);
+	LPDLL_CALL_FUNTION lpdll_function_launcher = LoadDLL<LPDLL_CALL_FUNTION>(module_dll_file, dll_function);
+
+	if (!lpdll_function_launcher)
+		return fail_ret("INVALID MODULE FUNCTION");
+
+	std::vector<VmObject*> io_vmobjs;
+	for (int obj_id : io_obj_ids)
+	{
+		VmObject* vmobj = res_manager->GetObjectW(obj_id);
+		if (vmobj == NULL)
+			return fail_ret("INVALID VMOBJ ID DETECTED : " + to_string(obj_id));
+		io_vmobjs.push_back(vmobj);
+		//switch (VmObject::GetObjectTypeFromID(obj_id))
+		//{
+		//case EvmObjectType::ObjectTypePRIMITIVE:
+		//case EvmObjectType::ObjectTypeVOLUME:
+		//case EvmObjectType::ObjectTypeTMAP:
+		//case EvmObjectType::ObjectTypeIMAGEPLANE:
+		//case EvmObjectType::ObjectTypeBUFFER:
+		//default:
+		//	return false;
+		//}
+	}
+
+	lpdll_function_launcher(io_vmobjs, parameters);
+	
+	return true;
 }
 
 #define SET_FUNC(vfn, OT, is_in, obj) vfn.vmobjs.insert(pair<VmObjKey, vector<VmObject*>>(VmObjKey(OT, is_in), vector<VmObject*>(1, obj)))
@@ -504,6 +536,67 @@ bool vzm::LoadModelFile(const std::string& filename, int& obj_id, const bool uni
 	//		itg->second->ReleaseGpuResourcesBySrcID(obj_id);
 	//}
 
+	return true;
+}
+
+bool vzm::GenerateEmptyVolume(int& vol_id, const int ref_vol_id, const std::string& data_type, const double min_v, const double max_v, const double fill_v)
+{
+	VmVObjectVolume* vol_obj = (VmVObjectVolume*)res_manager->GetVObject(vol_id);
+	if (vol_obj == NULL)
+	{
+		vol_obj = new VmVObjectVolume();
+		vol_id = res_manager->RegisterVObject(vol_obj, ObjectTypeVOLUME, vol_id);
+	}
+
+	if (vol_id == NULL) return false;
+
+	VmVObjectVolume* ref_vol_obj = (VmVObjectVolume*)res_manager->GetVObject(ref_vol_id);
+	if (ref_vol_obj)
+	{
+		VmFnContainer vfn;
+		vfn.vmobjs.insert(pair<VmObjKey, vector<VmObject*>>(VmObjKey(ObjectTypeVOLUME, true), { ref_vol_obj }));
+		vfn.vmobjs.insert(pair<VmObjKey, vector<VmObject*>>(VmObjKey(ObjectTypeVOLUME, false), { vol_obj }));
+		vfn.vmobjs.insert(pair<VmObjKey, vector<VmObject*>>(VmObjKey(ObjectTypeBUFFER, true), { global_buf_obj }));
+
+		VolumeData* ref_vol_data = ref_vol_obj->GetVolumeData();
+		
+		string _funcmode = "NEWALLOCATION";
+		vmint3 _vol_size = ref_vol_data->vol_size;
+		vmint3 _vol_bnd = ref_vol_data->bnd_size;
+		vmdouble3 _vol_pitch = ref_vol_data->vox_pitch;
+		vmmat44 _mat_vs2ws = ref_vol_obj->GetMatrixOS2WS();
+		bool _is_zrhs = ref_vol_data->axis_info.is_rhs;
+		vmdouble3 _axis_os2ws_x = ref_vol_data->axis_info.vec_axisx_ws;
+		vmdouble3 _axis_os2ws_y = ref_vol_data->axis_info.vec_axisy_ws;
+
+		vfn.vmparams.insert(pair<string, void*>("_string_FunctionMode", &_funcmode));
+		vfn.vmparams.insert(pair<string, void*>("_int3_VolumeSize", &_vol_size));
+		vfn.vmparams.insert(pair<string, void*>("_int3_ExBoundarySize", &_vol_bnd));
+		vfn.vmparams.insert(pair<string, void*>("_double3_VolumePitchSize", &_vol_pitch));
+		vfn.vmparams.insert(pair<string, void*>("_matrix44_VS2WS", &_mat_vs2ws));
+		vfn.vmparams.insert(pair<string, void*>("_bool_IsAxisZRHS", &_is_zrhs));
+		vfn.vmparams.insert(pair<string, void*>("_double3_VecAxisOSX2WSX", &_axis_os2ws_x));
+		vfn.vmparams.insert(pair<string, void*>("_double3_VecAxisOSX2WSY", &_axis_os2ws_y));
+
+		vmdouble2 minmax_v(min_v, max_v);
+		vfn.vmparams.insert(pair<string, void*>("_string_DataType", (void*)&data_type));
+		vfn.vmparams.insert(pair<string, void*>("_double2_MinMaxValue", &minmax_v));
+		vfn.vmparams.insert(pair<string, void*>("_double_FillingValue", (void*)&fill_v));
+
+		if (!module_arbitor->ExecuteModule(__module_CoreProcV, vfn))
+			return fail_ret("GenerateEmptyVolume :: Module Execution Failure!");
+	}
+
+	return false;
+}
+
+bool vzm::GenerateEmptyPrimitive(int& prim_id)
+{
+	VmVObjectPrimitive* prim_obj = (VmVObjectPrimitive*)res_manager->GetVObject(prim_id);
+	if (prim_obj != NULL)
+		DeleteObject(prim_id);
+	prim_obj = new VmVObjectPrimitive();
+	prim_id = res_manager->RegisterVObject(prim_obj, ObjectTypePRIMITIVE, prim_id);
 	return true;
 }
 
@@ -1475,6 +1568,17 @@ bool vzm::SetSceneEnvParameters(const int scene_id, const SceneEnvParameters& en
 	return true;
 }
 
+bool vzm::GetSceneEnvParameters(const int scene_id, SceneEnvParameters& env_params)
+{
+	auto it = scene_manager.find(scene_id);
+	if (it == scene_manager.end())
+		return false;
+
+	SceneInfo& curr_scene_info = it->second;
+	env_params = curr_scene_info.env_params;
+	return true;
+}
+
 bool vzm::GetCamProjMatrix(const int scene_id, const int cam_id, float* mat_ws2ss, float* mat_ss2ws, const bool is_col_major)
 {
 	auto it = scene_manager.find(scene_id);
@@ -2179,6 +2283,35 @@ bool vzmproc::GenerateSamplePoints(const int obj_src_id, const float* pos_src, c
 		//for (auto itg = gpu_manager.begin(); itg != gpu_manager.end(); itg++)
 		//	itg->second->ReleaseGpuResourcesBySrcID(obj_dst_id);
 
+		return true;
+	}
+	return false;
+}
+
+bool vzmproc::ComputeMatchingTransform(const int obj_from_id, const int obj_to_id, float* mat_tr /*float16*/)
+{
+	VmVObjectPrimitive* prim_from_obj = (VmVObjectPrimitive*)res_manager->GetVObject(obj_from_id);
+	VmVObjectPrimitive* prim_to_obj = (VmVObjectPrimitive*)res_manager->GetVObject(obj_to_id);
+	if (prim_from_obj == NULL || prim_to_obj == NULL)
+		return fail_ret("INVALID OBJECT id");
+
+	typedef bool(*LPDLL_CALL_MATCHING)(VmVObjectPrimitive* pobj_from, VmVObjectPrimitive* pobj_to, vmmat44f& mat_tr);
+
+	LPDLL_CALL_MATCHING lpdll_function = LoadDLL<LPDLL_CALL_MATCHING>("vismtv_modeling_vera", "compute_icp");
+	if (lpdll_function == NULL)
+		return fail_ret("MODULE LOAD FAILIRE IN GenerateSamplePoints!");
+
+	vmmat44f fmat_tr;
+	if (lpdll_function(prim_from_obj, prim_to_obj, fmat_tr))
+	{
+		//if (g_is_display)
+		//	cout << "complete matching!!" << prim_dst_obj->GetPrimitiveData()->num_vtx << endl;
+
+		//for (auto itg = gpu_manager.begin(); itg != gpu_manager.end(); itg++)
+		//	itg->second->ReleaseGpuResourcesBySrcID(obj_dst_id);
+
+		fmat_tr = glm::transpose(glm::fmat4x4(fmat_tr));
+		*(glm::fmat4x4*) mat_tr = fmat_tr;
 		return true;
 	}
 	return false;
