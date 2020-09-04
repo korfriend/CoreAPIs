@@ -120,6 +120,18 @@ int __module_CoreProcV = -1;
 
 size_t renderer_excutable_count = 0;
 
+auto tr_pt = [](const glm::fmat4x4& mat, const glm::fvec3& p) -> glm::fvec3
+{
+	glm::fvec4 _p(p, 1.f);
+	_p = mat * _p;
+	return glm::fvec3(_p.x / _p.w, _p.y / _p.w, _p.z / _p.w);
+};
+auto tr_nrvec = [](const glm::fmat4x4& mat, const glm::fvec3& v) -> glm::fvec3
+{
+	glm::fmat3x3 mat_r = mat;
+	return glm::normalize(mat_r * v);
+};
+
 bool vzm::InitEngineLib()
 {
 	// register in-bulit modules //
@@ -1363,6 +1375,66 @@ bool vzm::GetSceneObjectState(const int scene_id, const int obj_id, ObjStates& o
 	return true;
 }
 
+bool vzm::GetSceneBoundingBox(const std::initializer_list<int>& io_obj_ids, const int scene_id, float* pos_aabb_min_ws, float* pos_aabb_max_ws)
+{
+	auto it = scene_manager.find(scene_id);
+	if (it == scene_manager.end())
+		return false; // fail_ret("NO SCENE! id : " + to_string(scene_id));
+
+	map<int, ObjStates> dst_objs;
+	if (io_obj_ids.size() == 0) 
+		dst_objs = it->second.scene_objs;
+
+	for each(const int& obj_id in io_obj_ids)
+	{
+		auto itobj = it->second.scene_objs.find(obj_id);
+		if (itobj != it->second.scene_objs.end())
+			dst_objs[obj_id] = itobj->second;
+	}
+
+	glm::fvec3 pos_min_ws(FLT_MAX), pos_max_ws(-FLT_MAX);
+	for each(auto itdst in dst_objs)
+	{
+		const int obj_id = itdst.first;
+		VmVObject* vobj = res_manager->GetVObject(obj_id);
+		EvmObjectType obj_type = VmObject::GetObjectTypeFromID(obj_id);
+		glm::fvec3 _pos_min_ws, _pos_max_ws;
+		if (obj_type == EvmObjectType::ObjectTypePRIMITIVE)
+		{
+			PrimitiveData* prim_data = ((VmVObjectPrimitive*)vobj)->GetPrimitiveData();
+			glm::fmat4x4 mat_os2ws = __cm4__ itdst.second.os2ws;
+			_pos_min_ws = tr_pt(mat_os2ws, prim_data->aabb_os.pos_min);
+			_pos_max_ws = tr_pt(mat_os2ws, prim_data->aabb_os.pos_max);
+
+		}
+		else if (obj_type == EvmObjectType::ObjectTypeVOLUME)
+		{
+			VolumeData* vol_data = ((VmVObjectVolume*)vobj)->GetVolumeData();
+			vmmat44 mat_ori_vs2ws_rm;
+			vobj->GetCustomParameter("_matrix_originalOS2WS", data_type::dtype<vmmat44>(), &mat_ori_vs2ws_rm);
+			glm::fmat4x4 mat_vs2ws_cm = glm::transpose(mat_ori_vs2ws_rm);
+			glm::fmat4x4 mat_os2ws = __cm4__ itdst.second.os2ws * mat_vs2ws_cm;
+
+			_pos_min_ws = tr_pt(mat_os2ws, glm::fvec3(-0.5f));
+			_pos_max_ws = tr_pt(mat_os2ws, glm::fvec3(vol_data->vol_size.x, vol_data->vol_size.x, vol_data->vol_size.x) - glm::fvec3(0.5f));
+		}
+		else continue;
+
+		pos_min_ws.x = min(_pos_min_ws.x, pos_min_ws.x);
+		pos_min_ws.y = min(_pos_min_ws.y, pos_min_ws.y);
+		pos_min_ws.z = min(_pos_min_ws.z, pos_min_ws.z);
+
+		pos_max_ws.x = max(_pos_max_ws.x, pos_max_ws.x);
+		pos_max_ws.y = max(_pos_max_ws.y, pos_max_ws.y);
+		pos_max_ws.z = max(_pos_max_ws.z, pos_max_ws.z);
+	}
+
+	__cv3__ pos_aabb_min_ws = pos_min_ws;
+	__cv3__ pos_aabb_max_ws = pos_max_ws;
+
+	return true;
+}
+
 bool vzm::RemoveSceneObject(const int scene_id, const int obj_id)
 {
 	VmVObject* scene_obj = res_manager->GetVObject(obj_id);
@@ -2491,18 +2563,6 @@ bool helpers::ComputeCameraRendererParameters(const float* pos_xyz_ws, const flo
 bool helpers::ComputeArCameraCalibrateInfo(const float* mat_rbs2ts, const float* calrb_xyz_ts, const float* calrb_xy_ss, const int num_mks,
 	float* mat_camcs2rbs, CameraParameters* cam_ar_mode_params)
 {
-	auto tr_pt = [](const glm::fmat4x4& mat, const glm::fvec3& p) -> glm::fvec3
-	{
-		glm::fvec4 _p(p, 1.f);
-		_p = mat * _p;
-		return glm::fvec3(_p.x / _p.w, _p.y / _p.w, _p.z / _p.w);
-	};
-	auto tr_nrvec = [](const glm::fmat4x4& mat, const glm::fvec3& v) -> glm::fvec3
-	{
-		glm::fmat3x3 mat_r = mat;
-		return glm::normalize(mat_r * v);
-	};
-
 	glm::fmat4x4& fmat_rbs2ts = *(glm::fmat4x4*)mat_rbs2ts;
 
 	glm::fvec3 cam_pos_ts, cam_up_ts, cam_view_ts;
@@ -2614,18 +2674,6 @@ bool __ComputeArCameraCalibrateInfo(const float* mat_camrb2ws, const float* calr
 	glm::fvec3 cam_pos(0);
 	glm::fvec3 cam_up(0, 1, 0);
 	glm::fvec3 cam_view(0, 0, -1);
-
-	auto tr_pt = [](const glm::fmat4x4& mat, const glm::fvec3& p) -> glm::fvec3
-	{
-		glm::fvec4 _p(p, 1.f);
-		_p = mat * _p;
-		return glm::fvec3(_p.x / _p.w, _p.y / _p.w, _p.z / _p.w);
-	};
-	auto tr_nrvec = [](const glm::fmat4x4& mat, const glm::fvec3& v) -> glm::fvec3
-	{
-		glm::fmat3x3 mat_r = mat;
-		return glm::normalize(mat_r * v);
-	};
 
 	*(glm::fvec3*)cam_pos_crbs = tr_pt(mat_cam2rbcam, cam_pos);
 	*(glm::fvec3*)cam_up_crbs = tr_nrvec(mat_cam2rbcam, cam_up);
