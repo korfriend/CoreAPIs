@@ -10,6 +10,7 @@
 
 bool g_is_display = true;
 
+#define MAX_LOADING_OBJS 5000
 #define TESTOUT(NAME, P) {if(g_is_display){cout << NAME << P.x << ", " << P.y << ", " << P.z << endl;}}
 
 using namespace vzm;
@@ -264,7 +265,7 @@ void vzm::DisplayConsoleMessages(const bool is_display)
 	g_is_display = is_display;
 }
 
-bool vzm::ExecuteModule2(const std::string& module_dll_file, const std::string& dll_function, const std::initializer_list<int>& io_obj_ids, const std::map<string, any>& parameters)
+bool vzm::ExecuteModule2(const std::string& module_dll_file, const std::string& dll_function, const std::list<int>& io_obj_ids, const std::map<string, any>& parameters)
 {
 	typedef bool(*LPDLL_CALL_FUNTION)(const std::vector<vmobjects::VmObject*>& io_objs, const std::map<string, any>& parameters);
 	LPDLL_CALL_FUNTION lpdll_function_launcher = LoadDLL<LPDLL_CALL_FUNTION>(module_dll_file, dll_function);
@@ -547,6 +548,103 @@ bool vzm::LoadModelFile(const std::string& filename, int& obj_id, const bool uni
 	//	for (auto itg = gpu_manager.begin(); itg != gpu_manager.end(); itg++)
 	//		itg->second->ReleaseGpuResourcesBySrcID(obj_id);
 	//}
+
+	return true;
+}
+
+bool vzm::LoadMultipleModelsFile(const std::string& filename, std::list<int>& obj_ids, const bool unify_redundancy)
+{
+	string file_ext = filename.substr(filename.find_last_of(".") + 1);
+	string usage = ""; // to do //
+	if (file_ext == "stl")
+		usage = "IMPORTMESH_STL";
+	else if (file_ext == "obj")
+		usage = "IMPORTMESH_OBJ";
+	else if (file_ext == "ply")
+		usage = "IMPORTMESH_PLY";
+	else
+		return fail_ret("LoadMultipleModelsFile FAILURE! only primitives available");
+
+	// 1st .stl and .obj
+
+	VmFnContainer vfn;
+	vfn.vmobjs.insert(pair<VmObjKey, vector<VmObject*>>(VmObjKey(ObjectTypeBUFFER, true), vector<VmObject*>(1, global_buf_obj)));
+	vfn.vmobjs.insert(pair<VmObjKey, vector<VmObject*>>(VmObjKey(ObjectTypeBUFFER, false), vector<VmObject*>(1, global_buf_obj)));
+	vfn.vmparams.insert(pair<string, void*>("_string_UsageMode", &usage));
+
+	// primitives
+	bool is_center_aligned = false;
+	bool is_from_ccw = false;
+	bool is_topology_connected = unify_redundancy;
+	bool is_wireframe = false;
+	vmdouble4 obj_color = vmdouble4(1, 1, 0, 1);
+	double scale_factor = 1.0;
+
+	// volumes
+	vmint3 vol_size;
+	vmdouble3 vol_pitch;
+	string data_type("USHORT");
+	vmdouble3 vec_axis_osx2wsx, vec_axis_osy2wsy;
+	int header_offset;
+	bool is_axis_z_rhs;
+
+	vector<VmObject*> prim_objs(MAX_LOADING_OBJS);
+	vector<int> prim_ids(MAX_LOADING_OBJS, 0);
+	for(int i = 0; i < MAX_LOADING_OBJS; i++)
+	{
+		prim_objs[i] = new VmVObjectPrimitive();
+		prim_ids[i] = res_manager->RegisterVObject((VmVObjectPrimitive*)prim_objs[i], ObjectTypePRIMITIVE);
+	}
+
+	global_buf_obj->ReplaceOrAddStringBuffer("_vlist_STRING_FileNames", &filename, 1);
+	//global_buf_obj->ReplaceOrAddBufferPtr("_vlist_INT_ObjectIDs", &tmp_obj_id, 1, sizeof(int)); // will be deprecated
+
+	vfn.vmobjs.insert(pair<VmObjKey, vector<VmObject*>>(VmObjKey(ObjectTypePRIMITIVE, false), prim_objs));
+
+	vfn.vmparams.insert(pair<string, void*>("_bool_IsCenterAligned", &is_center_aligned));
+	//vfn.vmparams.insert(pair<string, void*>("_bool_IsFromCCW", &is_from_ccw)); // will be deprecated
+	vfn.vmparams.insert(pair<string, void*>("_bool_IsTopologyConnected", &is_topology_connected));
+	vfn.vmparams.insert(pair<string, void*>("_bool_IsWireframe", &is_wireframe));
+	vfn.vmparams.insert(pair<string, void*>("_double4_MeshColor", &obj_color));
+	vfn.vmparams.insert(pair<string, void*>("_double_ScaleFactor", &scale_factor));
+
+	if (!module_arbitor->ExecuteModule(__module_RWFiles, vfn))
+	{
+		global_buf_obj->ClearAllBuffers();
+		global_buf_obj->ClearAllDstObjValues();
+		if (g_is_display)
+			std::cout << "Failed to load the file in the file load module" << std::endl;
+		for (int i = 0; i < MAX_LOADING_OBJS; i++) res_manager->EraseVObject(prim_ids[i]);
+		return fail_ret("Failed to load the file in the file load module!");
+	}
+	global_buf_obj->ClearAllBuffers();
+	global_buf_obj->ClearAllDstObjValues();
+
+	vmfloat3 pos_min(FLT_MAX), pos_max(-FLT_MAX);
+	for (int i = 0; i < MAX_LOADING_OBJS; i++)
+	{
+		PrimitiveData* prim_data = ((VmVObjectPrimitive*)prim_objs[i])->GetPrimitiveData();
+		if (prim_data != NULL)
+		{
+			obj_ids.push_back(prim_ids[i]);
+			pos_max.x = max(pos_max.x, prim_data->aabb_os.pos_max.x);
+			pos_max.y = max(pos_max.y, prim_data->aabb_os.pos_max.y);
+			pos_max.z = max(pos_max.z, prim_data->aabb_os.pos_max.z);
+			pos_min.x = min(pos_min.x, prim_data->aabb_os.pos_min.x);
+			pos_min.y = min(pos_min.y, prim_data->aabb_os.pos_min.y);
+			pos_min.z = min(pos_min.z, prim_data->aabb_os.pos_min.z);
+		}
+		else
+			res_manager->EraseVObject(prim_ids[i]);
+	}
+
+	if (g_is_display)
+	{
+		std::cout << "Success to load " << filename << std::endl;
+		std::cout << "==> min/max pos of the object are (" <<
+			pos_min.x << ", " << pos_min.y << ", " << pos_min.z << ") / (" <<
+			pos_max.x << ", " << pos_max.y << ", " << pos_max.z << ")" << std::endl;
+	}
 
 	return true;
 }
@@ -1375,7 +1473,7 @@ bool vzm::GetSceneObjectState(const int scene_id, const int obj_id, ObjStates& o
 	return true;
 }
 
-bool vzm::GetSceneBoundingBox(const std::initializer_list<int>& io_obj_ids, const int scene_id, float* pos_aabb_min_ws, float* pos_aabb_max_ws)
+bool vzm::GetSceneBoundingBox(const std::list<int>& io_obj_ids, const int scene_id, float* pos_aabb_min_ws, float* pos_aabb_max_ws)
 {
 	auto it = scene_manager.find(scene_id);
 	if (it == scene_manager.end())
