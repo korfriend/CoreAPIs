@@ -260,6 +260,17 @@ void vzm::DebugTestSet(const std::string& _script, const void* _pvalue, const si
 	container2[_script] = std::tuple<size_t, byte*>(size_bytes, pv);
 }
 
+bool vzm::DebugTestGet(const std::string& _script, void* _pvalue, const size_t size_bytes, const int scene_id, const int cam_id, const int obj_id)
+{
+	std::map<int/*obj_id*/, std::map<std::string, std::tuple<size_t, byte*>>>& container1 = _test_dojo_scripts[std::tuple<int, int>(scene_id, cam_id)];
+	std::map<std::string, std::tuple<size_t, byte*>>& container2 = container1[obj_id];
+	auto it = container2.find(_script);
+	if (it == container2.end()) return false;
+
+	memcpy(_pvalue, std::get<1>(it->second), size_bytes);
+	return true;
+}
+
 void vzm::DisplayConsoleMessages(const bool is_display)
 {
 	g_is_display = is_display;
