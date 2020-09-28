@@ -1088,7 +1088,7 @@ bool vzm::GeneratePrimitiveObject(const float* xyz_list, const float* nrl_list, 
 		return fail_ret("INVALID DATA IN GeneratePrimitiveObject-2!");
 	}
 	tris_data.num_prims = num_prims;
-	tris_data.num_vtx = num_prims * stride_prim_idx;
+	tris_data.num_vtx = num_vtx;
 	tris_data.num_vidx = num_prims * stride_prim_idx;
 	tris_data.idx_stride = stride_prim_idx;
 	vmfloat3* xyz_vtx_buf = new vmfloat3[tris_data.num_vtx];
