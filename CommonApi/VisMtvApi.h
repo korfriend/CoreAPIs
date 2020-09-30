@@ -77,17 +77,27 @@ namespace vzm
 		float emission, diffusion, specular, sp_pow; // Phong's material reflection model
 		bool is_visible;
 		float color[4]; // rgba [0,1]
+
+		enum USAGE
+		{
+			VR_OTF,
+			MPR_WINDOWING,
+			VOLUME_MAP,
+			COLOR_MAP
+		};
 		// usage : "VR_OTF", "MPR_WINDOWING", "VOLUME_MAP", "COLOR_MAP"
-		std::map<std::string, int> associated_obj_ids; // <usage, obj_id> 
+		std::map<USAGE, int> associated_obj_ids; // <usage, obj_id> 
 
 		// 3D only
 		bool show_outline;
 		
 		// primitive 3D only
 		bool use_vertex_color; // use vertex color instead of color[0,1,2], if vertex buffer contains color information. note that color[3] is always used for the transparency
-		float point_thickness; // when the object consists of point cloud
-		float line_thickness; // not available for the wireframe's line
-		bool is_wireframe; // only for polygonal mesh
+		float point_thickness; // (diameter in pixels) when the object is defined as a point cloud without surfels
+		float surfel_size; // (diameter in world unit) when the object is defined as a point cloud with surfels
+		bool represent_points_to_surfels; // available when the object is defined as a point cloud
+		float line_thickness; // (pixels) available when the object is defined as line primitives and not available for wire frame lines
+		bool is_wireframe; // available when the object is a polygonal mesh
 		bool use_vertex_wirecolor; // use vertex color instead of wire_color[0,1,2], if vertex buffer contains color information. note that color[3] is always used for the transparency
 		float wire_color[4]; // rgba [0,1].. only for wireframe object
 
@@ -106,9 +116,11 @@ namespace vzm
 			color[0] = color[1] = color[2] = color[3] = 1.f;
 			memset(wire_color, 0, sizeof(float) * 4);
 			wire_color[3] = 1.f;
-			point_thickness = 0;
-			line_thickness = 0;
+			point_thickness = 0; // using 1 pixel 
+			line_thickness = 0; // using 1 pixel
+			surfel_size = 0; // using 0.002 size of object boundary
 			show_outline = false;
+			represent_points_to_surfels = true;
 
 			sample_rate = 1.f;
 		}

@@ -2770,6 +2770,31 @@ ERROR_UpdateTagBlocks:
 		it->second[_key] = buf;
 	}
 
+	void VmLObject::ReplaceOrAddDstObjValue(const int dst_obj_id, const std::string& _key, const std::any& v, const int bytes_dstobj_value)
+	{
+		auto it = loa_res->map_dstobj_values.find(dst_obj_id);
+		if (it != loa_res->map_dstobj_values.end())
+		{
+			auto __it = it->second.find(_key);
+			if (__it != it->second.end())
+			{
+				VMSAFE_DELETEARRAY(__it->second.dvbuf_ptr);
+				it->second.erase(__it);
+			}
+		}
+		else // if (it == loa_res->map_dstobj_values.end())
+		{
+			loa_res->map_dstobj_values.insert(pair<int, map<std::string, _lobj_dvalue>>(dst_obj_id, map<std::string, _lobj_dvalue>()));
+			it = loa_res->map_dstobj_values.find(dst_obj_id);
+		}
+
+		_lobj_dvalue buf;
+		buf.dvalue_bytes = bytes_dstobj_value;
+		buf.dvbuf_ptr = new byte[buf.dvalue_bytes];
+		memcpy(buf.dvbuf_ptr, &v, buf.dvalue_bytes);
+		it->second[_key] = buf;
+	}
+
 	bool VmLObject::GetDstObjValue(const int dst_obj_id, const std::string& _key, void* v_ptr)
 	{
 		auto it = loa_res->map_dstobj_values.find(dst_obj_id);

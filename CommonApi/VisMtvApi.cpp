@@ -1832,7 +1832,7 @@ bool vzm::RenderScene(const int scene_id, const int cam_id)
 		if (vobj)
 		{
 			ObjStates& obj_states = it_obj->second;
-			auto SetAssociateObjID = [&obj_id, &obj_states, &cam_res](const string& usage, const string& name, vector<VmObject*>& render_objs)
+			auto SetAssociateObjID = [&obj_id, &obj_states, &cam_res](const ObjStates::USAGE& usage, const string& name, vector<VmObject*>& render_objs)
 			{
 				auto it = obj_states.associated_obj_ids.find(usage);
 				if (it != obj_states.associated_obj_ids.end())
@@ -1864,12 +1864,12 @@ bool vzm::RenderScene(const int scene_id, const int cam_id)
 				vmfloat4 _wire_color = __cv4__ obj_states.wire_color;
 				VmVObjectPrimitive* pobj = (VmVObjectPrimitive*)vobj;
 				pobj->SetPrimitiveWireframeVisibilityColor(obj_states.is_wireframe, vmdouble4(_wire_color));
-				double point_thickness = obj_states.point_thickness;
-				double line_thickness = obj_states.line_thickness;
-				cam_res.scene_lbuf_obj->ReplaceOrAddDstObjValue(obj_id, "_double_PointThickness", &point_thickness, sizeof(double));
-				cam_res.scene_lbuf_obj->ReplaceOrAddDstObjValue(obj_id, "_double_LineThickness", &line_thickness, sizeof(double));
-				cam_res.scene_lbuf_obj->ReplaceOrAddDstObjValue(obj_id, "_bool_UseVertexColor", &obj_states.use_vertex_color, sizeof(bool));
-				cam_res.scene_lbuf_obj->ReplaceOrAddDstObjValue(obj_id, "_bool_UseVertexWireColor", &obj_states.use_vertex_wirecolor, sizeof(bool));
+				cam_res.scene_lbuf_obj->ReplaceOrAddDstObjValue(obj_id, "_double_PointThickness", (double)obj_states.point_thickness, sizeof(double));
+				cam_res.scene_lbuf_obj->ReplaceOrAddDstObjValue(obj_id, "_double_SurfelSize", (double)obj_states.surfel_size, sizeof(double));
+				cam_res.scene_lbuf_obj->ReplaceOrAddDstObjValue(obj_id, "_double_LineThickness", (double)obj_states.line_thickness, sizeof(double));
+				cam_res.scene_lbuf_obj->ReplaceOrAddDstObjValue(obj_id, "_bool_PointToSurfel", obj_states.represent_points_to_surfels, sizeof(bool));
+				cam_res.scene_lbuf_obj->ReplaceOrAddDstObjValue(obj_id, "_bool_UseVertexColor", obj_states.use_vertex_color, sizeof(bool));
+				cam_res.scene_lbuf_obj->ReplaceOrAddDstObjValue(obj_id, "_bool_UseVertexWireColor", obj_states.use_vertex_wirecolor, sizeof(bool));
 
 				//itr = obj_states.dojo_scripts.find("VzThickness");
 				//if (itr != obj_states.dojo_scripts.end())
@@ -1878,8 +1878,8 @@ bool vzm::RenderScene(const int scene_id, const int cam_id)
 				//	cam_res.scene_lbuf_obj->ReplaceOrAddDstObjValue(obj_id, "_double_VzThickness", &vz_thickness, sizeof(double));
 				//}
 
-				SetAssociateObjID("VOLUME_MAP", "_int_AssociatedVolumeID", sr_volumes);
-				SetAssociateObjID("COLOR_MAP", "_int_AssociatedTObjectID", sr_tmaps);
+				SetAssociateObjID(ObjStates::VOLUME_MAP, "_int_AssociatedVolumeID", sr_volumes);
+				SetAssociateObjID(ObjStates::COLOR_MAP, "_int_AssociatedTObjectID", sr_tmaps);
 			}
 			else if (VmObject::GetObjectTypeFromID(obj_id) == ObjectTypeVOLUME)
 			{
@@ -1887,18 +1887,17 @@ bool vzm::RenderScene(const int scene_id, const int cam_id)
 				vr_volumes.push_back(vobj);
 				main_volumes_vr.push_back(obj_id);
 				if (cam_params.projection_mode == 4)
-					SetAssociateObjID("MPR_WINDOWING", "_int_MainTObjectID", vr_tmaps);
+					SetAssociateObjID(ObjStates::MPR_WINDOWING, "_int_MainTObjectID", vr_tmaps);
 				else
 				{
-					SetAssociateObjID("VR_OTF", "_int_MainTObjectID", vr_tmaps);
-					SetAssociateObjID("MPR_WINDOWING", "_int_WindowingTObjectID", vr_tmaps);
+					SetAssociateObjID(ObjStates::VR_OTF, "_int_MainTObjectID", vr_tmaps);
+					SetAssociateObjID(ObjStates::MPR_WINDOWING, "_int_WindowingTObjectID", vr_tmaps);
 				}
-				SetAssociateObjID("VOLUME_MAP", "_int_AssociatedVolumeID", vr_volumes);
-				SetAssociateObjID("COLOR_MAP", "_int_AssociatedTObjectID", vr_tmaps);
+				SetAssociateObjID(ObjStates::VOLUME_MAP, "_int_AssociatedVolumeID", vr_volumes);
+				SetAssociateObjID(ObjStates::COLOR_MAP, "_int_AssociatedTObjectID", vr_tmaps);
 				//.. to do "_int_MaskVolumeObjectID" ...
 
-				double sample_rate = obj_states.sample_rate;
-				cam_res.scene_lbuf_obj->ReplaceOrAddDstObjValue(obj_id, "_double_SamplePrecisionLevel", &sample_rate, sizeof(double));
+				cam_res.scene_lbuf_obj->ReplaceOrAddDstObjValue(obj_id, "_double_SamplePrecisionLevel", (double)obj_states.sample_rate, sizeof(double));
 			}
 
 			// common
@@ -1906,14 +1905,14 @@ bool vzm::RenderScene(const int scene_id, const int cam_id)
 			vobj->RegisterCustomParameter("_bool_visibility", obj_states.is_visible);
 			vobj->RegisterCustomParameter("_bool_TestVisible", obj_states.is_visible);
 			vobj->RegisterCustomParameter("_double4_color", (vmdouble4)_color);
-			cam_res.scene_lbuf_obj->ReplaceOrAddDstObjValue(obj_id, "_bool_visibility", &obj_states.is_visible, sizeof(bool));
-			cam_res.scene_lbuf_obj->ReplaceOrAddDstObjValue(obj_id, "_bool_TestVisible", &obj_states.is_visible, sizeof(bool));
-			cam_res.scene_lbuf_obj->ReplaceOrAddDstObjValue(obj_id, "_double4_color", &vmdouble4(_color), sizeof(vmdouble4));
+			cam_res.scene_lbuf_obj->ReplaceOrAddDstObjValue(obj_id, "_bool_visibility", obj_states.is_visible, sizeof(bool));
+			cam_res.scene_lbuf_obj->ReplaceOrAddDstObjValue(obj_id, "_bool_TestVisible", obj_states.is_visible, sizeof(bool));
+			cam_res.scene_lbuf_obj->ReplaceOrAddDstObjValue(obj_id, "_double4_color", vmdouble4(_color), sizeof(vmdouble4));
 
 
 			vmdouble4 shadingfactors(obj_states.emission, obj_states.diffusion, obj_states.specular, obj_states.sp_pow);
-			cam_res.scene_lbuf_obj->ReplaceOrAddDstObjValue(obj_id, "_double4_ShadingFactors", &shadingfactors, sizeof(vmdouble4));
-			cam_res.scene_lbuf_obj->ReplaceOrAddDstObjValue(obj_id, "_bool_ShowOutline", &obj_states.show_outline, sizeof(bool));
+			cam_res.scene_lbuf_obj->ReplaceOrAddDstObjValue(obj_id, "_double4_ShadingFactors", shadingfactors, sizeof(vmdouble4));
+			cam_res.scene_lbuf_obj->ReplaceOrAddDstObjValue(obj_id, "_bool_ShowOutline", obj_states.show_outline, sizeof(bool));
 		}
 		else
 			printf("ERROR!\n");
