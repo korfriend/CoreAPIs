@@ -119,7 +119,7 @@ int __module_TMapGen = -1;
 int __module_CoreProcP = -1;
 int __module_CoreProcV = -1;
 
-size_t renderer_excutable_count = 0;
+size_t renderer_excute_count = 0;
 
 auto tr_pt = [](const glm::fmat4x4& mat, const glm::fvec3& p) -> glm::fvec3
 {
@@ -243,7 +243,7 @@ bool vzm::DeinitEngineLib()
 
 	is_initialized_engine = false;
 
-	std::cout << "Render (successfully) calls : " << renderer_excutable_count << std::endl;
+	std::cout << "Render (successfully) calls : " << renderer_excute_count << std::endl;
 	std::cout << "Bye Bye~ ^^" << std::endl;
 
 	return true;
@@ -2066,12 +2066,12 @@ bool vzm::RenderScene(const int scene_id, const int cam_id)
 	}
 
 	cam_res.recent_rendered_time = vmhelpers::GetCurrentTimePack();
-	renderer_excutable_count++;
+	renderer_excute_count++;
 
 	return true;
 }
 
-bool vzm::GetRenderBufferPtrs(const int scene_id, unsigned char** ptr_rgba, float** ptr_zdepth, int* fbuf_w, int* fbuf_h, int cam_id)
+bool vzm::GetRenderBufferPtrs(const int scene_id, unsigned char** ptr_rgba, float** ptr_zdepth, int* fbuf_w, int* fbuf_h, int cam_id, size_t* render_count)
 {
 	auto false_ret = [&]()
 	{
@@ -2103,6 +2103,7 @@ bool vzm::GetRenderBufferPtrs(const int scene_id, unsigned char** ptr_rgba, floa
 	if (ptr_zdepth) *ptr_zdepth = fbuf_depth ? (float*)fbuf_depth->fbuffer : NULL;
 	if (fbuf_w) *fbuf_w = fbuf_rgba->w;
 	if (fbuf_h) *fbuf_h = fbuf_rgba->h;
+	if (render_count) *render_count = renderer_excute_count;
 
 	return true;
 }
@@ -2152,6 +2153,24 @@ bool vzm::GetPModelData(const int obj_id, float** pos_vtx, float** nrl_vtx, floa
 	}
 	return true;
 }
+
+bool vzm::GetVolumeInfo(const int obj_id, void*** vol_slices_2darray_pointer, int* size_xyz, float* pitch_xyz, int* stride_bytes)
+{
+	VmVObject* pobj = res_manager->GetVObject(obj_id);
+	if (pobj == NULL)
+		return fail_ret("NO OBJECT! id : " + to_string(obj_id));
+	if (pobj->GetObjectType() != vmenums::EvmObjectType::ObjectTypeVOLUME)
+		return fail_ret("NOT VOLUME OBJECT! id : " + to_string(obj_id));
+
+	VolumeData* vol_data = ((VmVObjectVolume*)pobj)->GetVolumeData();
+	if (vol_slices_2darray_pointer) *vol_slices_2darray_pointer = vol_data->vol_slices;
+	if (size_xyz) *(vmint3*)size_xyz = vol_data->vol_size;
+	if (pitch_xyz) *(vmfloat3*)pitch_xyz = vol_data->vox_pitch;
+	if (stride_bytes) *(int*)stride_bytes = vol_data->store_dtype.type_bytes;
+	
+	return true;
+}
+
 
 bool vzm::ValidatePickTarget(const int obj_id)
 {
