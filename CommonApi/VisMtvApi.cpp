@@ -769,14 +769,14 @@ auto __GetVObject = [](int& obj_id) -> VmVObjectVolume*
 	return vol_obj;
 };
 
-bool vzm::GenerateArrowObject(const float* pos_s, const float* pos_e, const float radius, int& obj_id)
+bool vzm::GenerateArrowObject(const float* pos_s, const float* pos_e, const float radius_body, const float radius_head, int& obj_id)
 {
 	VmVObjectPrimitive* prim_obj = __GetPObject(obj_id);
 
 	PrimitiveData prim_data;
 	vmdouble3 _pos_s = __cv3__ pos_s;
 	vmdouble3 _pos_e = __cv3__ pos_e;
-	vmgeom::GeneratePrimitive_Arrow(prim_data, _pos_s, _pos_e, 0.8, vmdouble2(radius * 0.8, radius * 1.2), 20);
+	vmgeom::GeneratePrimitive_Arrow(prim_data, _pos_s, _pos_e, 0.8, vmdouble2(radius_body, radius_head), 20);
 	if (!prim_obj->RegisterPrimitiveData(prim_data))
 	{
 		prim_data.Delete();
@@ -1185,7 +1185,7 @@ bool vzm::GeneratePointCloudObject(const float* xyz_list, const float* nrl_list,
 	return true;
 }
 
-bool vzm::GenerateTextObject(const float* xyz_LT_view_up, const std::string& text, const float font_height, bool bold, bool italic, int& obj_id)
+bool vzm::GenerateTextObject(const float* xyz_LT_view_up, const std::string& text, const float font_height, const bool bold, const bool italic, int& obj_id, const bool center_aligned)
 {
 	VmVObjectPrimitive* prim_obj = __GetPObject(obj_id);
 
@@ -1196,6 +1196,7 @@ bool vzm::GenerateTextObject(const float* xyz_LT_view_up, const std::string& tex
 	std::string _text = text;
 	bool _bold = bold;
 	bool _italic = italic;
+	bool _center_aligned = center_aligned;
 	double dfont_height = font_height;
 	double dist_from_plane = 0;
 
@@ -1218,6 +1219,7 @@ bool vzm::GenerateTextObject(const float* xyz_LT_view_up, const std::string& tex
 	vfn.vmparams.insert(pair<string, void*>("_double3_PointPlaneLT", &pos_LT));
 	vfn.vmparams.insert(pair<string, void*>("_double3_PlaneView", &view));
 	vfn.vmparams.insert(pair<string, void*>("_double3_PlaneUp", &up));
+	vfn.vmparams.insert(pair<string, void*>("_bool_CenterAligned", &_center_aligned));
 
 	if (!module_arbitor->ExecuteModule(__module_CoreProcP, vfn))
 	{
@@ -2316,16 +2318,45 @@ bool vzm::Pick1stHitSurfaceUsingDepthMap(float* pos_pick, const int x, const int
 	return true;
 }
 
-bool ReplaceOrAddArrowObject(const int scene_id, int& obj_id, const vzm::ObjStates& obj_states, const float* pos_s, const float* pos_e, const float radius)
+bool vzm::PickObjectAlongRay(float* pos_pick, const int pick_obj_id, const float* pos_ray, const float* dir_ray, const int scene_id)
 {
-	if (!vzm::GenerateArrowObject(pos_s, pos_e, radius, obj_id)) return false;
-	return vzm::ReplaceOrAddSceneObject(scene_id, obj_id, obj_states);
-}
+	if (VmObject::GetObjectTypeFromID(pick_obj_id) != EvmObjectType::ObjectTypePRIMITIVE) return false;
 
-bool ReplaceOrAddSpheresObject(const int scene_id, int& obj_id, const vzm::ObjStates& obj_states, const float* xyzr_list, const float* rgb_list, const int num_spheres)
-{
-	if (!vzm::GenerateSpheresObject(xyzr_list, rgb_list, num_spheres, obj_id)) return false;
-	return vzm::ReplaceOrAddSceneObject(scene_id, obj_id, obj_states);
+	auto it = scene_manager.find(scene_id);
+	if (it == scene_manager.end())
+		return fail_ret("NO SCENE! id : " + to_string(scene_id));
+
+	SceneInfo& curr_scene_info = scene_manager[scene_id];
+
+	typedef bool(*LPDLL_CALL_dxPickRay)(uint* puiHitCount/*out*/, uint* puiPolygonID/*out*/,
+		float* pfBaryU/*out*/, float* pfBaryV/*out*/, float* pfDist/*out*/,
+		VmVObjectPrimitive* pCVObjMesh, vmfloat3 f3PosRayStartWS, vmfloat3 f3VecRayDirWS);
+	LPDLL_CALL_dxPickRay lpdll_function = LoadDLL<LPDLL_CALL_dxPickRay>("vismtv_dxutwrapper", "dxPickRay");
+	if (lpdll_function == NULL)
+		return fail_ret("MODULE LOAD FAILIRE IN PickObjectAlongRay!");
+
+	vmfloat3 _pos_ray = *(vmfloat3*)pos_ray;
+	vmfloat3 _dir_ray = *(vmfloat3*)dir_ray;
+
+	VmVObjectPrimitive* prim_obj = (VmVObjectPrimitive*)res_manager->GetVObject(pick_obj_id);
+	uint hitCount;
+	uint polygonID;
+	float baryU;
+	float baryV;
+	float depth;
+	lpdll_function(&hitCount, &polygonID, &baryU, &baryV, &depth, prim_obj, _pos_ray, _dir_ray);
+	if (hitCount == 0) return false;
+
+	vmfloat3 f3PosRayStartOS, f3VecRayDirOS;
+	fTransformPoint(&f3PosRayStartOS, &_pos_ray, &prim_obj->GetMatrixWS2OSf());
+	fTransformVector(&f3VecRayDirOS, &_dir_ray, &prim_obj->GetMatrixWS2OSf());
+	fNormalizeVector(&f3VecRayDirOS, &f3VecRayDirOS);
+
+	vmfloat3 pos_hit_os = f3PosRayStartOS + f3VecRayDirOS * depth, pos_hit_ws;
+	fTransformPoint(&pos_hit_ws, &pos_hit_os, &prim_obj->GetMatrixOS2WSf());
+
+	*(vmfloat3*)pos_pick = pos_hit_ws;
+	return true;
 }
 
 //#include "../../VmNativeModules/vismtv_modeling_vera/InteropHeader.h"
